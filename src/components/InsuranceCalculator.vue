@@ -83,6 +83,7 @@
            :key forces a remount on recalc so the count-up animations re-fire. -->
       <div class="results-section" v-else-if="result && manuallyTriggered" :key="recalcKey">
         <ResultsSummary :result="result" />
+        <DebugPanel :result="result" />
         <ReservesTable :result="result" />
       </div>
 
@@ -151,6 +152,7 @@ import InputForm from './InputForm.vue';
 import RidersSection from './RidersSection.vue';
 import ResultsSummary from './ResultsSummary.vue';
 import ReservesTable from './ReservesTable.vue';
+import DebugPanel from './DebugPanel.vue';
 import { useI18n } from '../i18n/index.js';
 
 const { t } = useI18n();
