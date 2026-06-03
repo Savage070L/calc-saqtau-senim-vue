@@ -74,7 +74,8 @@ export class PolicyCalculator {
     const G6 = en.N, G7 = en.O;
     const g10 = Math.ceil(en.M * 100) / 100;
     if (t === 1) {
-      return { G2: g10, G3: g10, G6, G7, G8: this.surrenderPenalty };
+      // Excel: G3 = ROUNDUP(IF(t=1, 0, ...), 2) → G3 = 0 при единовременном взносе
+      return { G2: g10, G3: 0, G6, G7, G8: this.surrenderPenalty };
     }
     const et = this.expenseTable[clampTermKey(t)];
     const G2 = Math.ceil(et.K * 100) / 100;

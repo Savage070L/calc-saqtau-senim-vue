@@ -47,7 +47,8 @@ export class RidersCalculator {
     const en = this.expenseTable[clampTermKey(n)];
     const G6 = en.N, G7 = en.O;
     const g10 = Math.ceil(en.M * 100) / 100;
-    if (t === 1) return { G2: g10, G3: g10, G6, G7 };
+    // Excel: G3 = ROUNDUP(IF(t=1, 0, ...), 2) → G3 = 0 при единовременном взносе
+    if (t === 1) return { G2: g10, G3: 0, G6, G7 };
     const et = this.expenseTable[clampTermKey(t)];
     return {
       G2: Math.ceil(et.K * 100) / 100,
