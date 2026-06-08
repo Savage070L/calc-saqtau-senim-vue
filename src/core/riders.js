@@ -59,23 +59,37 @@ export class RidersCalculator {
 
   // ─── Простой доп (SA-linked или fixed-sum) ────────────────────────────────
 
-  calculateSimpleRider(riderName, riderSum, term, frequency, kMult = 1.0, lAdd = 0.0) {
+  /**
+   * Эталон: лист «Расчёты по допам», ячейки B6/F6/J6 и т.п.:
+   *   single: gross_tariff = ROUND( (tariff × n × kMult + lAdd) × (1+e)/(1-q), 4 )
+   *   другое: gross_tariff = ROUND( (tariff       × kMult + lAdd) × (1+e)/(1-q), 4 )
+   *   premium = ROUND( gross_tariff × riderSum × freqFactor, 0 )
+   *
+   * ВАЖНО: для single Excel умножает базовый тариф на n ВНУТРИ скобки ROUND до 4 знаков,
+   * а не после — иначе расхождения 0.01% на тарифе превращаются в десятки тенге.
+   */
+  calculateSimpleRider(riderName, riderSum, term, frequency, kMultArg = 1.0, lAdd = 0.0) {
     const rc          = this.ridersConfig[riderName] ?? {};
     const baseTariff  = rc.tariff ?? 0.0;
     const expenseRate = rc.expenses ?? 0.0;
     const acquisition = rc.acquisition ?? 0.0;
+    // kMult из конфига рейдера (например, для trauma_extra = 1.25)
+    // умножается на внешний kMult (если передан)
+    const kMult       = (rc.kMult ?? 1.0) * kMultArg;
 
+    // Для единовременного взноса базовый тариф уже умножается на n ПЕРЕД ROUND(4)
+    const tariffForGross = frequency === 'single' ? baseTariff * term : baseTariff;
     const grossTariff = roundHalfUp(
-      (baseTariff * kMult + lAdd) * (1.0 + expenseRate) / (1.0 - acquisition),
+      (tariffForGross * kMult + lAdd) * (1.0 + expenseRate) / (1.0 - acquisition),
       4,
     );
 
     const freqFactor    = this._freqFactor(frequency);
     const annualPremium = grossTariff * riderSum;
 
-    const riderPremium = frequency === 'single'
-      ? roundHalfUp(annualPremium * term)
-      : roundHalfUp(annualPremium * freqFactor);
+    // Премия = ROUND(gross × CC × ff, 0)
+    // Для single ff=1 (n уже зашит в grossTariff)
+    const riderPremium = roundHalfUp(annualPremium * freqFactor);
 
     return {
       riderName,

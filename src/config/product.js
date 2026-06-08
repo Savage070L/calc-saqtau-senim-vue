@@ -86,14 +86,16 @@ export const PRODUCT_CONFIG = {
   //
   riders: {
 
+    // Базовые тарифы — эталонные значения из «Копия senim 010626.xlsm»
+    // (лист «Расчёты по допам», ячейки B3, F3 и т.д.)
     accidental_death: {
-      tariff:      0.001008,
+      tariff:      0.001,        // Excel: B3 = 0.001
       expenses:    0.25,
       acquisition: 0.40,
     },
 
     traffic_death: {
-      tariff:      0.000336,
+      tariff:      0.0003333333333333333,  // Excel: B21 = B3/3 = 0.001/3
       expenses:    0.25,
       acquisition: 0.40,
     },
@@ -103,37 +105,41 @@ export const PRODUCT_CONFIG = {
     },
 
     disability_any_lumpsum: {
-      tariff:      0.001392,
+      tariff:      0.00141,      // Excel: F21 = 0.141% = 0.00141
       expenses:    0.25,
       acquisition: 0.40,
     },
 
     disability_accident_lumpsum: {
-      tariff:      0.000480,
+      tariff:      0.00047,      // Excel: J3 = 0.047% = 0.00047
       expenses:    0.25,
       acquisition: 0.40,
     },
 
     trauma: {
-      tariff:      0.0045,
+      tariff:      0.0045,       // Excel: F3 = 0.3% × 1.5 = 0.0045
       expenses:    0.05,
       acquisition: 0.25,
     },
 
+    // trauma_extra — обычный тариф травм × мультипликатор «доп. застрахованного»
+    // Excel J13 = 0.3% × 1.5 = 0.0045, в J16 умножается на (0.25 + K37=1) = 1.25
+    // У нас kMult = 1.25 заранее зашит в код (вместо отдельного K37)
     trauma_extra: {
-      tariff:      0.005643,
+      tariff:      0.0045,       // тот же базовый тариф, что у trauma
       expenses:    0.05,
       acquisition: 0.25,
+      kMult:       1.25,         // мультипликатор для дополнительного застрахованного
     },
 
     temporary_disability: {
-      tariff:      0.002,
+      tariff:      0.002,        // Excel: B13 = 0.2% = 0.002
       expenses:    0.05,
       acquisition: 0.25,
     },
 
     hospitalization: {
-      tariff:      0.000786,
+      tariff:      0.00075,      // Excel: F13 = 0.075% = 0.00075
       expenses:    0.05,
       acquisition: 0.25,
     },
