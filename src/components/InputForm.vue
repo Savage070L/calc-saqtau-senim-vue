@@ -168,6 +168,53 @@
       </label>
     </div>
 
+    <!-- ── ИНДЕКСАЦИЯ ──────────────────────────────────────────────────── -->
+    <div class="annuity-toggle-wrap" v-if="local.frequency === 'single'">
+      <label class="annuity-toggle-label">
+        <span class="toggle-icon-wrap">
+          <input type="checkbox" v-model="local.enableIndexation" class="annuity-chk" />
+          <span class="custom-chk"></span>
+        </span>
+        <span class="toggle-text">{{ t('form.enableIndexation') }}</span>
+        <InfoTooltip v-bind="tip('indexation')" />
+        <span class="toggle-arrow">{{ local.enableIndexation ? '▲' : '▼' }}</span>
+      </label>
+    </div>
+
+    <div v-if="local.enableIndexation && local.frequency === 'single'" class="form-grid annuity-grid">
+      <!-- Ставка индексации -->
+      <div class="form-group full-width">
+        <label class="label-row" for="indexRate">{{ t('form.indexRate') }} <InfoTooltip v-bind="tip('indexRate')" /></label>
+        <div class="rate-input-wrap">
+          <input
+            id="indexRate"
+            type="number"
+            v-model.number="local.indexRate"
+            min="0"
+            max="50"
+            step="0.1"
+            class="neu-input"
+          />
+          <span class="rate-suffix">%</span>
+        </div>
+      </div>
+
+      <!-- Срок индексации -->
+      <div class="form-group term-group full-width">
+        <div class="term-header">
+          <label class="label-row">{{ t('form.indexYears') }} <InfoTooltip v-bind="tip('indexYears')" /></label>
+          <span class="term-badge">{{ pluralYears(local.indexYears) }}</span>
+        </div>
+        <input
+          type="range"
+          v-model.number="local.indexYears"
+          min="1"
+          :max="Math.max(1, (local.term || 1) - 1)"
+          class="term-slider"
+        />
+      </div>
+    </div>
+
     <div v-if="local.enableAnnuity" class="form-grid annuity-grid">
       <!-- Периодичность выплат -->
       <div class="form-group full-width">
@@ -759,6 +806,32 @@ input[type="date"].neu-input::-webkit-calendar-picker-indicator:hover { opacity:
   position: absolute; top: 50%; left: 50%;
   transform: translate(-50%, -50%);
   font-size: 11px; color: white; font-weight: 800;
+}
+
+/* ── Поле «ставка индексации %» ─── */
+.rate-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.rate-input-wrap input {
+  width: 100%;
+  padding-right: 36px;   /* место под суффикс % */
+  font-weight: 700;
+  text-align: right;
+}
+.rate-input-wrap input::-webkit-outer-spin-button,
+.rate-input-wrap input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.rate-input-wrap input { -moz-appearance: textfield; }
+.rate-suffix {
+  position: absolute;
+  right: 14px;
+  font-weight: 700;
+  color: var(--text-light, #5FBDF5);
+  pointer-events: none;
 }
 .toggle-text {
   font-size: 13px; font-weight: 700;

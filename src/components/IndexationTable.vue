@@ -1,0 +1,133 @@
+<template>
+  <div v-if="rows.length > 0" class="indexation-block">
+    <div class="ix-toggle" @click="open = !open" :class="{ expanded: open }">
+      <span class="icon">📈</span>
+      <span class="ix-title">{{ t('indexation.title', { rate: indexRate, years: indexYears }) }}</span>
+      <InfoTooltip v-bind="tip('indexationResult')" />
+      <span class="ix-arrow">{{ open ? '▲' : '▼' }}</span>
+    </div>
+
+    <div v-if="open" class="ix-wrap">
+      <table class="data-table ix-table">
+        <thead>
+          <tr>
+            <th>{{ t('indexation.colYear') }}</th>
+            <th>{{ t('indexation.colDate') }}</th>
+            <th>{{ t('indexation.colAge') }}</th>
+            <th class="num">{{ t('indexation.colSA') }}</th>
+            <th class="num">{{ t('indexation.colPremium') }}</th>
+            <th class="num">{{ t('indexation.colReserve') }}</th>
+            <th class="num">{{ t('indexation.colSurrender') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="r in rows" :key="r.year">
+            <td class="col-year">{{ r.year }}</td>
+            <td class="col-date">{{ formatDate(r.date) }}</td>
+            <td>{{ r.age }}</td>
+            <td class="num col-sa">{{ fmt(r.sumAssured) }}</td>
+            <td class="num col-prem">{{ fmt(r.premium) }}</td>
+            <td class="num">{{ fmt(r.reserve) }}</td>
+            <td class="num col-surrender">{{ fmt(r.surrender) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed } from 'vue';
+import InfoTooltip from './InfoTooltip.vue';
+import { useI18n } from '../i18n/index.js';
+
+const { t, tip } = useI18n();
+
+const props = defineProps({
+  result: { type: Object, default: null },
+});
+
+const open = ref(true);
+
+const rows = computed(() => props.result?.indexationSchedule ?? []);
+const indexRate = computed(() => props.result?.indexRate ?? 0);
+const indexYears = computed(() => props.result?.indexYears ?? 0);
+
+function fmt(v) {
+  if (v === null || v === undefined || Number.isNaN(v)) return '—';
+  return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 })
+    .format(Math.round(v)) + ' ₸';
+}
+function formatDate(iso) {
+  if (!iso) return '—';
+  const [y, m, d] = iso.split('-');
+  return `${d}.${m}.${y}`;
+}
+</script>
+
+<style scoped>
+.indexation-block {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(95,189,245,0.22);
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-top: 14px;
+}
+.ix-toggle {
+  display: flex; align-items: center; gap: 10px;
+  cursor: pointer;
+  user-select: none;
+  font-weight: 700;
+  font-size: 15px;
+  color: #FFFFFF;
+}
+.ix-toggle .icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px;
+  border-radius: 10px;
+  background: rgba(161,201,90,0.18);
+  font-size: 18px;
+}
+.ix-title { flex: 1 1 auto; min-width: 0; }
+.ix-arrow { font-size: 12px; opacity: 0.7; }
+.ix-toggle.expanded { padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.10); margin-bottom: 10px; }
+
+.ix-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.ix-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.ix-table th, .ix-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  text-align: left;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.ix-table th {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 11px;
+  color: #B3D9FF;
+  background: linear-gradient(135deg, #2D5171, #4A7295);
+  position: sticky; top: 0; z-index: 1;
+}
+.ix-table tbody tr:nth-child(odd) td { background: rgba(161,201,90,0.07); }
+.ix-table tbody tr:nth-child(even) td { background: rgba(95,189,245,0.05); }
+.ix-table tbody tr:hover td { background: rgba(95,189,245,0.16); }
+.num { text-align: right; font-family: 'SF Mono', 'Menlo', monospace; }
+.col-year { color: #5FBDF5; font-weight: 700; }
+.col-date { color: #B3D9FF; }
+.col-sa, .col-prem { font-weight: 600; color: #FFFFFF; }
+.col-surrender { color: #A1C95A; font-weight: 700; }
+
+@media (max-width: 720px) {
+  .ix-table { font-size: 12px; }
+  .ix-table th, .ix-table td { padding: 6px 8px; }
+}
+</style>

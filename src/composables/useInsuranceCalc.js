@@ -6,6 +6,7 @@ import { ref, computed } from 'vue';
 import { ActuarialEngine } from '../core/actuarial.js';
 import { PolicyCalculator } from '../core/calculator.js';
 import { RidersCalculator } from '../core/riders.js';
+import { calculateIndexationSchedule } from '../core/indexation.js';
 import { PRODUCT_CONFIG } from '../config/product.js';
 import { useI18n } from '../i18n/index.js';
 
@@ -163,6 +164,9 @@ export function useInsuranceCalc() {
         annuityFrequency = 'annual',
         annuityTerm = 0,
         guaranteedPeriod = 0,
+        enableIndexation = false,
+        indexRate = 7,        // в процентах: 7 == 7 %
+        indexYears = 5,
         riders: ridersSelection = {},
         kMult = 1.0,
         lAdd = 0.0,
@@ -282,6 +286,20 @@ export function useInsuranceCalc() {
         return;
       }
 
+      // ── Индексация (опциональный блок) ────────────────────────────────────
+      // Считается только для единовременного взноса (как в эталонном Excel).
+      let indexationSchedule = [];
+      if (enableIndexation && frequency === 'single'
+          && finalSA > 0 && indexRate > 0 && indexYears > 0) {
+        indexationSchedule = calculateIndexationSchedule({
+          dob, gender, term, frequency,
+          initialSumAssured: finalSA,
+          indexRate: indexRate / 100,   // вход в %, передаём как долю
+          indexYears,
+          engine: getEngine().engine,
+        });
+      }
+
       result.value = {
         ...finalResult,
         riders: finalRidersResult.riders,
@@ -289,6 +307,10 @@ export function useInsuranceCalc() {
         totalPremium,
         maturityAmount,
         annuityPayment: enableAnnuity ? finalResult.annuityPayment : 0,
+        indexationSchedule,
+        enableIndexation,
+        indexRate,
+        indexYears,
         calcDate: new Date().toISOString().slice(0, 10),
       };
     } catch (e) {

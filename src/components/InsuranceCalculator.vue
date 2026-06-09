@@ -83,6 +83,7 @@
            :key forces a remount on recalc so the count-up animations re-fire. -->
       <div class="results-section" v-else-if="result && manuallyTriggered" :key="recalcKey">
         <ResultsSummary :result="result" />
+        <IndexationTable :result="result" />
         <DebugPanel :result="result" />
         <ReservesTable :result="result" />
       </div>
@@ -152,6 +153,7 @@ import InputForm from './InputForm.vue';
 import RidersSection from './RidersSection.vue';
 import ResultsSummary from './ResultsSummary.vue';
 import ReservesTable from './ReservesTable.vue';
+import IndexationTable from './IndexationTable.vue';
 import DebugPanel from './DebugPanel.vue';
 import { useI18n } from '../i18n/index.js';
 
@@ -173,6 +175,10 @@ const formData = ref({
   annuityFrequency: 'annual',
   annuityTerm: 10,
   guaranteedPeriod: 10,
+  // Индексация (доступна только при frequency='single')
+  enableIndexation: false,
+  indexRate: 7,         // % годовых
+  indexYears: 5,        // лет индексации
   riders: {
     // group1 (radio)
     accidental_death:            { enabled: false },
