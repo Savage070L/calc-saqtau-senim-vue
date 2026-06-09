@@ -21,10 +21,17 @@ import { ActuarialEngine } from './actuarial.js';
 import { PRODUCT_CONFIG }  from '../config/product.js';
 
 // ─── Вспомогательное округление (ROUND_HALF_UP, как в Excel) ─────────────────
-
+//
+// Особенность: умножения float-чисел вида 5400 × 0.0875 в JS дают
+// 472.49999999999994 вместо ровно 472.5, и тогда Math.round возвращает 472
+// вместо ожидаемого 473 (как Excel). Поэтому добавляем компенсацию 1e-9,
+// которой достаточно чтобы «прижать» к правильному значению, но недостаточно
+// чтобы повлиять на корректно округляющиеся числа.
 export function roundHalfUp(value, decimals = 0) {
+  if (!Number.isFinite(value)) return value;
   const factor = Math.pow(10, decimals);
-  return Math.round((value + Number.EPSILON) * factor) / factor;
+  const eps    = value >= 0 ? 1e-9 : -1e-9;
+  return Math.round(value * factor + eps) / factor;
 }
 
 function clampTermKey(n) {

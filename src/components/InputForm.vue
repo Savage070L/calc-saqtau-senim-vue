@@ -169,7 +169,7 @@
     </div>
 
     <!-- ── ИНДЕКСАЦИЯ ──────────────────────────────────────────────────── -->
-    <div class="annuity-toggle-wrap" v-if="local.frequency === 'single'">
+    <div class="annuity-toggle-wrap">
       <label class="annuity-toggle-label">
         <span class="toggle-icon-wrap">
           <input type="checkbox" v-model="local.enableIndexation" class="annuity-chk" />
@@ -181,7 +181,7 @@
       </label>
     </div>
 
-    <div v-if="local.enableIndexation && local.frequency === 'single'" class="form-grid annuity-grid">
+    <div v-if="local.enableIndexation" class="form-grid annuity-grid">
       <!-- Ставка индексации -->
       <div class="form-group full-width">
         <label class="label-row" for="indexRate">{{ t('form.indexRate') }} <InfoTooltip v-bind="tip('indexRate')" /></label>

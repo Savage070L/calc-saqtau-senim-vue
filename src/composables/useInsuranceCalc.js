@@ -287,10 +287,9 @@ export function useInsuranceCalc() {
       }
 
       // ── Индексация (опциональный блок) ────────────────────────────────────
-      // Считается только для единовременного взноса (как в эталонном Excel).
+      // Работает для всех периодичностей (single + рассрочка).
       let indexationSchedule = [];
-      if (enableIndexation && frequency === 'single'
-          && finalSA > 0 && indexRate > 0 && indexYears > 0) {
+      if (enableIndexation && finalSA > 0 && indexRate > 0 && indexYears > 0) {
         indexationSchedule = calculateIndexationSchedule({
           dob, gender, term, frequency,
           initialSumAssured: finalSA,

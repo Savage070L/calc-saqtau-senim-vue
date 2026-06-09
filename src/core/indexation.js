@@ -143,11 +143,14 @@ export function calculateIndexationSchedule(params) {
     const ax_n = Dx > 0 ? (Nx - Nxn) / Dx       : 0;
     const ax_t = Dx > 0 ? (Nx - Nxt) / Dx       : 0;
 
-    // Нагрузки: G6/G7 — по оставшемуся сроку, G2/G3 — особенные для индексации.
-    const { G6, G7 } = getG6G7(config, remainingTerm);
-    const rawG2G3    = getG2G3(config, remainingTerm, isSingle);
+    // Нагрузки. В эталоне (Excel «Параметры i»):
+    //   • G6 / G7 — по ИСХОДНОМУ сроку n (формула =INDEX(N1:N13, MIN(n-2,13)))
+    //   • G2 / G3 — по исходному сроку оплаты t, но
+    //       G2 = IF(n-n_iz>0, 0, ROUNDUP(...))  → обнуляется при m ≥ 1
+    //       G3 = IF(n-n_iz>1, 0, ROUNDUP(...))  → обнуляется при m ≥ 2
+    const { G6, G7 } = getG6G7(config, term);                      // по исходному n
+    const rawG2G3    = getG2G3(config, term, isSingle);            // по исходному t
 
-    // Эталон Excel: после m >= 1 G2 = 0; после m >= 2 G3 = 0.
     const G2 = m >= 1 ? 0 : rawG2G3.G2;
     const G3 = m >= 2 ? 0 : rawG2G3.G3;
 
