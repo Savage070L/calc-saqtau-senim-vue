@@ -95,12 +95,12 @@ function formatPeriod(r) {
 .ix-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 15px;
 }
 .ix-table th, .ix-table td {
-  padding: 8px 10px;
+  padding: 10px 12px;
   border-bottom: 1px solid rgba(255,255,255,0.08);
-  text-align: left;
+  text-align: center;            /* всё по центру */
   vertical-align: middle;
   white-space: nowrap;
 }
@@ -108,7 +108,7 @@ function formatPeriod(r) {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  font-size: 11px;
+  font-size: 13px;
   color: #B3D9FF;
   background: linear-gradient(135deg, #2D5171, #4A7295);
   position: sticky; top: 0; z-index: 1;
@@ -117,14 +117,15 @@ function formatPeriod(r) {
 .ix-table tbody tr:nth-child(even) td { background: rgba(95,189,245,0.05); }
 .ix-table tbody tr:hover td { background: rgba(95,189,245,0.16); }
 
-.num { text-align: right; font-family: 'SF Mono', 'Menlo', monospace; }
-.col-num { text-align: center; color: #5FBDF5; font-weight: 700; width: 50px; }
+.num { font-family: 'SF Mono', 'Menlo', monospace; }
+.col-num { color: #5FBDF5; font-weight: 700; width: 60px; }
 .col-date { color: #B3D9FF; }
 .col-prem { color: #FFFFFF; font-weight: 600; }
 .col-sa   { color: #A1C95A; font-weight: 700; }
 
 @media (max-width: 720px) {
-  .ix-table { font-size: 12px; }
-  .ix-table th, .ix-table td { padding: 6px 8px; }
+  .ix-table { font-size: 13px; }
+  .ix-table th, .ix-table td { padding: 8px 10px; }
+  .ix-table th { font-size: 11px; }
 }
 </style>
