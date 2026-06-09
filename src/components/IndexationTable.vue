@@ -20,7 +20,7 @@
         <tbody>
           <tr v-for="(r, idx) in rows" :key="r.year">
             <td class="col-num">{{ idx + 1 }}</td>
-            <td class="col-date">{{ formatDate(r.date) }}</td>
+            <td class="col-date">{{ formatPeriod(r) }}</td>
             <td class="num col-prem">{{ fmt(r.premium) }}</td>
             <td class="num col-sa">{{ fmt(r.sumAssured) }}</td>
           </tr>
@@ -54,6 +54,10 @@ function formatDate(iso) {
   if (!iso) return '—';
   const [y, m, d] = iso.split('-');
   return `${d}.${m}.${y}`;
+}
+function formatPeriod(r) {
+  if (!r.dateEnd) return formatDate(r.date);
+  return `${formatDate(r.date)} – ${formatDate(r.dateEnd)}`;
 }
 </script>
 

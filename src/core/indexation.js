@@ -88,12 +88,25 @@ function getG2G3(config, n, isSingle) {
  *   age: number, remainingTerm: number,
  * }>}
  */
+// Какие рейдеры считаются SA-linked (СС растёт с индексацией основного)
+const SA_LINKED_KEYS = [
+  'accidental_death', 'traffic_death',
+  'disability_any_lumpsum', 'disability_accident_lumpsum',
+];
+// Fixed-sum рейдеры: их сумма НЕ индексируется (сумма выбрана пользователем)
+const FIXED_SUM_KEYS = [
+  'trauma', 'trauma_extra', 'temporary_disability', 'hospitalization',
+];
+
 export function calculateIndexationSchedule(params) {
   const {
     dob, gender, term, frequency = 'single',
     initialSumAssured, indexRate,
     baseDate = new Date(),
     engine, config = PRODUCT_CONFIG,
+    // Опционально: проброс выбранных рейдеров для расчёта ПОЛНОЙ премии
+    ridersSelection = null,
+    ridersCalc      = null,
   } = params;
 
   if (!engine) throw new Error('calculateIndexationSchedule: engine is required');
@@ -128,16 +141,30 @@ export function calculateIndexationSchedule(params) {
     const rate = engine.getInterestRate(frequency, remainingTerm);
     const comm = engine.getCommutationTable(gender, 1.0, 0.0, rate);
 
-    // Актуарные величины при возрасте ageM и оставшемся сроке remainingTerm
-    const t      = isSingle ? 1 : remainingTerm;
+    // Актуарные величины при возрасте ageM (= x_iz эталона).
+    //
+    // ВАЖНО: эталон Excel «Расчет i» использует разные возрасты в разных
+    // ячейках (defined names x = Параметры!C7 = ИСХОДНЫЙ возраст, x_iz =
+    // Параметры i!D7 = возраст на дату индексации):
+    //   B1 (Dx)   = D(x_iz)
+    //   B2 (Dx+1) = D(x + 1)             ← исходный возраст
+    //   B5 (Dx+n) = D(x + n)             ← исходный возраст и срок
+    //   B7 (Nx)   = N(x_iz)
+    //   B8 (Nx+n) = N(x + n)             ← исходный
+    //   B9 (Nx+t) = N(x_iz + n)          ← новый x_iz, исходный n
+    //   B11 (Mx)  = M(x_iz)
+    //   B12 (Mx+n)= M(x + n)             ← исходный
+    //
+    // (x_iz + n) = (ageM + term), а (x + n) = (baseAge + term) = тот же
+    // конечный возраст. (x + 1) = (baseAge + 1) — НЕ ageM + 1!
     const Dx     = comm.Dx(ageM);
-    const Dxn    = comm.Dx(ageM + remainingTerm);
-    const Dx1    = comm.Dx(ageM + 1);
+    const Dxn    = comm.Dx(baseAge + term);            // = D(x + n)
+    const Dx1    = comm.Dx(baseAge + 1);               // = D(x + 1), исходный возраст
     const Mx     = comm.Mx(ageM);
-    const Mxn    = comm.Mx(ageM + remainingTerm);
+    const Mxn    = comm.Mx(baseAge + term);            // = M(x + n)
     const Nx     = comm.Nx(ageM);
-    const Nxn    = comm.Nx(ageM + remainingTerm);
-    const Nxt    = comm.Nx(ageM + t);
+    const Nxn    = comm.Nx(baseAge + term);            // = N(x + n)
+    const Nxt    = comm.Nx(ageM + (isSingle ? 1 : term));  // = N(x_iz + n)
 
     const Ax_n = Dx > 0 ? (Mx - Mxn + Dxn) / Dx : 0;
     const ax_n = Dx > 0 ? (Nx - Nxn) / Dx       : 0;
@@ -159,8 +186,36 @@ export function calculateIndexationSchedule(params) {
     const den = ax_t - G6 * ax_t - (G2 + G3 * Dx1 / Dx);
     const BP  = den > 0 ? num / den : 0;
 
-    // Премия года m
-    const premium = roundHalfUp(BP * saM * freqFactor);
+    // Премия основного покрытия года m
+    const mainPremium = roundHalfUp(BP * saM * freqFactor);
+
+    // ── Премии всех включённых рейдеров (для отображения «итого» в таблице) ──
+    // SA-linked рейдеры считаются с новой СС (saM); fixed-sum — со своей суммой.
+    // Возраст и срок — текущие (ageM, remainingTerm). CI пересчитывается актуарно.
+    let ridersPremium = 0;
+    if (ridersSelection && ridersCalc) {
+      const tCur = isSingle ? 1 : remainingTerm;
+      for (const rk of SA_LINKED_KEYS) {
+        if (ridersSelection[rk]?.enabled) {
+          ridersPremium += ridersCalc.calculateSimpleRider(rk, saM, remainingTerm, frequency).riderPremium;
+        }
+      }
+      for (const rk of FIXED_SUM_KEYS) {
+        const sel = ridersSelection[rk];
+        if (sel?.enabled && (sel.sum ?? 0) > 0) {
+          ridersPremium += ridersCalc.calculateSimpleRider(rk, sel.sum, remainingTerm, frequency).riderPremium;
+        }
+      }
+      const ciSel = ridersSelection.critical_illness;
+      if (ciSel?.enabled && (ciSel.sum ?? 0) > 0) {
+        ridersPremium += ridersCalc.calculateCIRider(ageM, remainingTerm, tCur, gender, ciSel.sum, frequency).riderPremium;
+      }
+      // Premium waiver — при single или t≤1 = 0; иначе считается от mainPremium
+      if (ridersSelection.premium_waiver?.enabled) {
+        ridersPremium += ridersCalc.calculateWaiverRider(ageM, remainingTerm, tCur, gender, saM, BP, frequency).riderPremium;
+      }
+    }
+    const premium = mainPremium + ridersPremium;
 
     // Резерв/выкуп на КОНЕЦ года 1 (для отображения первого года полиса m)
     // У single t=1, поэтому alpha при k=1: только G3 (если он > 0)
@@ -183,12 +238,19 @@ export function calculateIndexationSchedule(params) {
     const date = new Date(baseDate.getTime());
     date.setFullYear(date.getFullYear() + m);
 
+    // Дата конца года (период оплаты = дата .. дата + 1 год)
+    const dateEnd = new Date(date.getTime());
+    dateEnd.setFullYear(dateEnd.getFullYear() + 1);
+
     rows.push({
       year:           m,
       date:           date.toISOString().slice(0, 10),
+      dateEnd:        dateEnd.toISOString().slice(0, 10),
       age:            ageM,
       remainingTerm,
       sumAssured:     Math.round(saM * 100) / 100,
+      mainPremium,
+      ridersPremium,
       premium,
       BP_rate:        BP,
       G2, G3, G6, G7,

@@ -287,13 +287,17 @@ export function useInsuranceCalc() {
 
       // ── Индексация (опциональный блок) ────────────────────────────────────
       // Работает для всех периодичностей. Срок индексации = term - 1 (авто).
+      // Считаем ПОЛНУЮ премию каждого года (основное + все включённые рейдеры).
       let indexationSchedule = [];
       if (enableIndexation && finalSA > 0 && indexRate > 0) {
+        const { engine: e, ridersCalc: rc } = getEngine();
         indexationSchedule = calculateIndexationSchedule({
           dob, gender, term, frequency,
           initialSumAssured: finalSA,
-          indexRate: indexRate / 100,   // вход в %, передаём как долю
-          engine: getEngine().engine,
+          indexRate: indexRate / 100,
+          engine: e,
+          ridersSelection: allowedRidersSelection,
+          ridersCalc: rc,
         });
       }
 
