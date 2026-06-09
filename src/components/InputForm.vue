@@ -182,34 +182,36 @@
     </div>
 
     <div v-if="local.enableIndexation" class="form-grid annuity-grid">
-      <!-- Ставка индексации -->
-      <div class="form-group full-width">
-        <label class="label-row" for="indexRate">{{ t('form.indexRate') }} <InfoTooltip v-bind="tip('indexRate')" /></label>
-        <div class="rate-input-wrap">
-          <input
-            id="indexRate"
-            type="number"
-            v-model.number="local.indexRate"
-            min="0"
-            max="50"
-            step="0.1"
-            class="neu-input"
-          />
-          <span class="rate-suffix">%</span>
-        </div>
-      </div>
-
-      <!-- Срок индексации -->
+      <!-- Ставка индексации — слайдер в стиле «Срок страхования» -->
       <div class="form-group term-group full-width">
         <div class="term-header">
-          <label class="label-row">{{ t('form.indexYears') }} <InfoTooltip v-bind="tip('indexYears')" /></label>
-          <span class="term-badge">{{ pluralYears(local.indexYears) }}</span>
+          <label class="label-row">
+            {{ t('form.indexRate') }}
+            <InfoTooltip v-bind="tip('indexRate')" />
+          </label>
+          <span class="term-badge">
+            <input
+              type="text"
+              inputmode="decimal"
+              :value="formatIndexRate(local.indexRate)"
+              @focus="onIndexRateFocus"
+              @input="onIndexRateInput"
+              @blur="onIndexRateBlur"
+              @keydown.enter.prevent="$event.target.blur()"
+              :style="{ width: indexRateInputWidth }"
+              class="term-badge-input"
+              aria-label="Ставка индексации"
+            />
+            <span class="term-badge-word">%</span>
+          </span>
         </div>
         <input
           type="range"
-          v-model.number="local.indexYears"
-          min="1"
-          :max="Math.max(1, (local.term || 1) - 1)"
+          v-model.number="local.indexRate"
+          min="0.5"
+          max="20"
+          step="0.5"
+          :style="indexRateSliderStyle"
           class="term-slider"
         />
       </div>
@@ -460,6 +462,40 @@ const guaranteedPeriodSliderStyle = computed(() => {
     background: `linear-gradient(to right, #5C8E2F 0%, #A1C95A ${pct}%, rgba(255,255,255,0.22) ${pct}%, rgba(255,255,255,0.14) 100%)`,
   };
 });
+
+// ── Ставка индексации (слайдер 0.5 .. 20 %, шаг 0.5) ──
+const indexRateSliderStyle = computed(() => {
+  const min = 0.5, max = 20, val = local.value.indexRate ?? 7;
+  const pct = max > min ? ((val - min) / (max - min)) * 100 : 0;
+  return {
+    background: `linear-gradient(to right, #5C8E2F 0%, #A1C95A ${pct}%, rgba(255,255,255,0.22) ${pct}%, rgba(255,255,255,0.14) 100%)`,
+  };
+});
+const indexRateInputWidth = computed(() => {
+  // Делаем ширину «прыгающего» бейджа стабильной: 3 символа всегда
+  const s = String(local.value.indexRate ?? 7);
+  return `${Math.max(s.length, 3) * 9}px`;
+});
+function formatIndexRate(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return '';
+  // Без дробной если целое; иначе 1 знак (для .5)
+  return Math.round(n) === n ? String(n) : n.toFixed(1);
+}
+function onIndexRateFocus(e) { e.target.select(); }
+function onIndexRateInput(e) {
+  // Допускаем 0.5..20, поддерживаем ввод с точкой/запятой
+  const raw = String(e.target.value).replace(',', '.').replace(/[^\d.]/g, '');
+  const n = parseFloat(raw);
+  if (Number.isFinite(n)) local.value.indexRate = Math.max(0.5, Math.min(20, n));
+}
+function onIndexRateBlur(e) {
+  // На выходе — округляем к шагу 0.5 для соответствия слайдеру
+  const n = Number(local.value.indexRate);
+  if (!Number.isFinite(n)) { local.value.indexRate = 7; return; }
+  const stepped = Math.round(n * 2) / 2;
+  local.value.indexRate = Math.max(0.5, Math.min(20, stepped));
+}
 </script>
 
 <style scoped>

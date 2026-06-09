@@ -175,10 +175,9 @@ const formData = ref({
   annuityFrequency: 'annual',
   annuityTerm: 10,
   guaranteedPeriod: 10,
-  // Индексация (доступна только при frequency='single')
+  // Индексация: ставка % годовых, срок = term-1 (авто)
   enableIndexation: false,
-  indexRate: 7,         // % годовых
-  indexYears: 5,        // лет индексации
+  indexRate: 7,
   riders: {
     // group1 (radio)
     accidental_death:            { enabled: false },

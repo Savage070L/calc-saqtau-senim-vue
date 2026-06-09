@@ -2,7 +2,7 @@
   <div v-if="rows.length > 0" class="indexation-block">
     <div class="ix-toggle" @click="open = !open" :class="{ expanded: open }">
       <span class="icon">📈</span>
-      <span class="ix-title">{{ t('indexation.title', { rate: indexRate, years: indexYears }) }}</span>
+      <span class="ix-title">{{ t('indexation.title') }}</span>
       <InfoTooltip v-bind="tip('indexationResult')" />
       <span class="ix-arrow">{{ open ? '▲' : '▼' }}</span>
     </div>
@@ -11,24 +11,18 @@
       <table class="data-table ix-table">
         <thead>
           <tr>
-            <th>{{ t('indexation.colYear') }}</th>
-            <th>{{ t('indexation.colDate') }}</th>
-            <th>{{ t('indexation.colAge') }}</th>
-            <th class="num">{{ t('indexation.colSA') }}</th>
+            <th class="col-num">{{ t('indexation.colNum') }}</th>
+            <th>{{ t('indexation.colPeriod') }}</th>
             <th class="num">{{ t('indexation.colPremium') }}</th>
-            <th class="num">{{ t('indexation.colReserve') }}</th>
-            <th class="num">{{ t('indexation.colSurrender') }}</th>
+            <th class="num">{{ t('indexation.colSA') }}</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="r in rows" :key="r.year">
-            <td class="col-year">{{ r.year }}</td>
+          <tr v-for="(r, idx) in rows" :key="r.year">
+            <td class="col-num">{{ idx + 1 }}</td>
             <td class="col-date">{{ formatDate(r.date) }}</td>
-            <td>{{ r.age }}</td>
-            <td class="num col-sa">{{ fmt(r.sumAssured) }}</td>
             <td class="num col-prem">{{ fmt(r.premium) }}</td>
-            <td class="num">{{ fmt(r.reserve) }}</td>
-            <td class="num col-surrender">{{ fmt(r.surrender) }}</td>
+            <td class="num col-sa">{{ fmt(r.sumAssured) }}</td>
           </tr>
         </tbody>
       </table>
@@ -50,8 +44,6 @@ const props = defineProps({
 const open = ref(true);
 
 const rows = computed(() => props.result?.indexationSchedule ?? []);
-const indexRate = computed(() => props.result?.indexRate ?? 0);
-const indexYears = computed(() => props.result?.indexYears ?? 0);
 
 function fmt(v) {
   if (v === null || v === undefined || Number.isNaN(v)) return '—';
@@ -120,11 +112,12 @@ function formatDate(iso) {
 .ix-table tbody tr:nth-child(odd) td { background: rgba(161,201,90,0.07); }
 .ix-table tbody tr:nth-child(even) td { background: rgba(95,189,245,0.05); }
 .ix-table tbody tr:hover td { background: rgba(95,189,245,0.16); }
+
 .num { text-align: right; font-family: 'SF Mono', 'Menlo', monospace; }
-.col-year { color: #5FBDF5; font-weight: 700; }
+.col-num { text-align: center; color: #5FBDF5; font-weight: 700; width: 50px; }
 .col-date { color: #B3D9FF; }
-.col-sa, .col-prem { font-weight: 600; color: #FFFFFF; }
-.col-surrender { color: #A1C95A; font-weight: 700; }
+.col-prem { color: #FFFFFF; font-weight: 600; }
+.col-sa   { color: #A1C95A; font-weight: 700; }
 
 @media (max-width: 720px) {
   .ix-table { font-size: 12px; }

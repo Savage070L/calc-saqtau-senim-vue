@@ -166,7 +166,6 @@ export function useInsuranceCalc() {
         guaranteedPeriod = 0,
         enableIndexation = false,
         indexRate = 7,        // в процентах: 7 == 7 %
-        indexYears = 5,
         riders: ridersSelection = {},
         kMult = 1.0,
         lAdd = 0.0,
@@ -287,14 +286,13 @@ export function useInsuranceCalc() {
       }
 
       // ── Индексация (опциональный блок) ────────────────────────────────────
-      // Работает для всех периодичностей (single + рассрочка).
+      // Работает для всех периодичностей. Срок индексации = term - 1 (авто).
       let indexationSchedule = [];
-      if (enableIndexation && finalSA > 0 && indexRate > 0 && indexYears > 0) {
+      if (enableIndexation && finalSA > 0 && indexRate > 0) {
         indexationSchedule = calculateIndexationSchedule({
           dob, gender, term, frequency,
           initialSumAssured: finalSA,
           indexRate: indexRate / 100,   // вход в %, передаём как долю
-          indexYears,
           engine: getEngine().engine,
         });
       }
@@ -309,7 +307,6 @@ export function useInsuranceCalc() {
         indexationSchedule,
         enableIndexation,
         indexRate,
-        indexYears,
         calcDate: new Date().toISOString().slice(0, 10),
       };
     } catch (e) {

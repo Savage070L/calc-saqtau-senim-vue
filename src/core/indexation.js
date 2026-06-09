@@ -91,7 +91,7 @@ function getG2G3(config, n, isSingle) {
 export function calculateIndexationSchedule(params) {
   const {
     dob, gender, term, frequency = 'single',
-    initialSumAssured, indexRate, indexYears,
+    initialSumAssured, indexRate,
     baseDate = new Date(),
     engine, config = PRODUCT_CONFIG,
   } = params;
@@ -99,7 +99,6 @@ export function calculateIndexationSchedule(params) {
   if (!engine) throw new Error('calculateIndexationSchedule: engine is required');
   if (!dob || !gender || !term || !initialSumAssured) return [];
   if (indexRate < 0 || indexRate > 1) return [];
-  if (indexYears < 1) return [];
 
   const isSingle  = frequency === 'single';
   const baseAge   = PolicyCalculator.calculateAge(dob);
@@ -108,8 +107,9 @@ export function calculateIndexationSchedule(params) {
   const surrenderPenalty = config.surrenderPenalty;
 
   const rows = [];
-  // На индексационный период не пускаем дальше срока страхования
-  const maxM = Math.min(indexYears, term - 1);
+  // Срок индексации фиксированный: term - 1 (год 0 = базовый, до года term-1 включительно).
+  // При n=10 → строки Y0..Y9 (10 строк), при n=5 → Y0..Y4 (5 строк).
+  const maxM = term - 1;
 
   for (let m = 0; m <= maxM; m++) {
     const ageM           = baseAge + m;
