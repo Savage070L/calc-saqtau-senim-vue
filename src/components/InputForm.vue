@@ -884,17 +884,13 @@ input[type="date"].neu-input::-webkit-calendar-picker-indicator:hover { opacity:
 }
 .toggle-arrow { font-size: 10px; color: #5FBDF5; }
 
-/* Фиксированная ставка индексации — статичный бейдж справа в строке тоггла */
+/* Фиксированная ставка индексации — просто значение справа в строке тоггла */
 .idx-rate-badge {
   margin-left: auto;
   font-family: 'SF Mono', 'Menlo', monospace;
   font-size: 15px;
   font-weight: 800;
   color: #A1C95A;
-  background: rgba(161, 201, 90, 0.15);
-  border: 1px solid rgba(161, 201, 90, 0.40);
-  border-radius: 10px;
-  padding: 4px 12px;
   white-space: nowrap;
   flex-shrink: 0;
 }
