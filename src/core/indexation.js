@@ -1,34 +1,42 @@
 /**
  * Расчёт индексации полиса — Saqtau Senim
  *
- * Эталон: «010626 Saqtau SENIM индексация NBS123.xlsm» (макрос Final_Stable_Macro_HiddenSheet,
+ * Эталон: «09_06_2026 SAQTAU SENIM NBS.xlsm» (макрос Final_Stable_Macro_HiddenSheet,
  * листы «Данные i», «Параметры i», «Расчет i»).
  *
- * Идея индексации:
- *   Каждую годовщину страховая сумма увеличивается на фиксированный процент (по умолчанию 7 %).
- *   Премия пересчитывается под новый возраст, оставшийся срок и индексированную СС.
- *   После 1-го года уже не списывается «АВ 1-й год» (G2 = 0),
- *   после 2-го года — «АВ 2-й год» (G3 = 0) тоже.
+ * Модель эталона — «доплата за прирост СС с накопленным резервом Vx_m»:
+ *   Каждую годовщину m страховая сумма увеличивается на ставку индексации, и клиент
+ *   платит НЕ полную премию за новую СС, а премию за (СС_m − F9_m), где F9_m —
+ *   «оплаченная» часть СС, эквивалентная накопленному резерву Vx_m.
  *
- * Формулы:
- *   ─── для каждой годовщины m = 0..indexYears ─────────────────────────────────
- *   SA_m = SA_0 × (1 + rate)^m              // индексированная СС
- *   age_m = age_0 + m                       // возраст вырос
- *   remaining_n = n_0 - m                   // срок уменьшился
+ * Точная рекурсия (восстановлена из формул Excel и подтверждена до тенге на
+ * закэшированном прогоне макроса — 20 годовщин, n=20, индексация 20 %):
  *
- *   ─── актуарные при новом возрасте и сроке (single, t = 1) ───────────────────
- *   Ax:n = (M(age_m) − M(age_m + remaining_n) + D(age_m + remaining_n)) / D(age_m)
- *   ax:t = (N(age_m) − N(age_m + 1)) / D(age_m) ≈ 1
+ *   ─── кривые ИСХОДНОГО полиса (k = 0..n, исходный возраст x, исходные n и t) ──
+ *   A(k)  = (M(x+k) − M(x+n) + D(x+n)) / D(x+k)        // Ax:n на год k («Расчет i» E18+)
+ *   aN(k) = (N(x+k) − N(x+n)) / D(x+k)                 // ax:n на год k (F18+)
+ *   aT(k) = (N(x+k) − N(x+t)) / D(x+k)                 // ax:t на год k (G18+); t = n при
+ *                                                      // рассрочке (⇒ aT = aN), t = 1 при single
  *
- *   ─── нагрузки с поэтапным обнулением аквизиции ─────────────────────────────
- *   G6, G7 — берутся по сроку remaining_n (тот же expense_table)
- *   G2_m = 0  если m ≥ 1 (уже не первый год полиса)
- *   G3_m = 0  если m ≥ 2 (уже не второй год полиса)
- *   На m = 0 G2/G3 = стандартные (как при обычном single-расчёте).
+ *   ─── состояние годовщины m (m = 0..n−1) ────────────────────────────────────
+ *   SA_m = SA_0 × (1 + i)^m
+ *   G2_m = 0 при m ≥ 1; G3_m = 0 при m ≥ 2 (аквизиция списана)
+ *   F1 = A(m); F2 = aN(m)            // верхний блок «Расчет i» (x_iz = x+m даёт те же значения)
+ *   F3 = aN(m) при рассрочке         // B9 = N(x+t) с ИСХОДНЫМИ x и t ⇒ ax:t = ax:n
+ *      = 1      при single           // (N(x_iz) − N(x_iz+1))/D(x_iz)
+ *   BP_m = (F1 + G7×F2) / (F3 − G6×F3 − (G2_m + G3_m × D(x+1)/D(x+m)))   // «Расчет i»!F7
+ *   F9_m = ROUND(Vx_m / (F1 + G7×F2))                                    // «Расчет i»!F9
+ *   премия_m = ROUND(BP_m × (SA_m − F9_m) × коэф.периодичности)          // «Расчет i»!F8
  *
- *   ─── брутто-ставка и премия года m ─────────────────────────────────────────
- *   BP_m = (Ax:n + G7 × ax:n) / (ax:t − G6 × ax:t − (G2_m + G3_m × D(x+1)/D(x)))
- *   premium_m = ROUND(BP_m × SA_m × freqFactor, 0)
+ *   ─── накопление резерва («Данные i» E54+ → «Расчет i» I/J(18+m+1), счит. в состоянии m) ──
+ *   alfa = G3_m при k = m+1 = 1, иначе 0                                 // «Расчет i» H19+
+ *   Irate = A(k) + G7×aN(k) − BP_m × (aT(k)×(1−G6) − alfa)               // I(18+k)
+ *   Vx_{m+1} = ROUND(Irate × (SA_m − F9_m) + F9_m × A(k)),  k = m+1      // I×(C15−F9)+J
+ *   Vx_0 = 0
+ *
+ * ВАЖНО: кривые A/aN/aT берутся по исходному возрасту x+k (НЕ по x_iz), а в шаге
+ * накопления Vx участвует BP текущего года m. Выкупная — по эталонным колонкам
+ * K/L/M «Расчет i»: L = I − (1−I)×штраф; K = J − (F9−J)×штраф; M = max(L,0)×(СС−F9)+K.
  */
 
 import { PolicyCalculator, roundHalfUp } from './calculator.js';
@@ -119,10 +127,43 @@ export function calculateIndexationSchedule(params) {
   const freqFactor = isSingle ? 1.0 : (freqAdj[frequency] ?? 1.0);
   const surrenderPenalty = config.surrenderPenalty;
 
+  // Техническая ставка фиксируется при выпуске полиса (в Excel — одна таблица
+  // «Комутационные i» на весь прогон), поэтому берётся по ИСХОДНОМУ сроку.
+  const rate = engine.getInterestRate(frequency, term);
+  const comm = engine.getCommutationTable(gender, 1.0, 0.0, rate);
+
+  const D = a => comm.Dx(a);
+  const N = a => comm.Nx(a);
+  const M = a => comm.Mx(a);
+
+  // Константы исходного полиса
+  const Dxn  = D(baseAge + term);                          // D(x+n)
+  const Nxn  = N(baseAge + term);                          // N(x+n)
+  const Mxn  = M(baseAge + term);                          // M(x+n)
+  const NxtO = N(baseAge + (isSingle ? 1 : term));         // B9 = N(x+t), исходные x и t
+
+  // Кривые исходного полиса на год k (эталон: «Расчет i», строки 18+, возраст x+k)
+  const A_  = k => { const d = D(baseAge + k); return d > 0 ? (M(baseAge + k) - Mxn + Dxn) / d : 0; };
+  const aN_ = k => { const d = D(baseAge + k); return d > 0 ? (N(baseAge + k) - Nxn) / d : 0; };
+  // Для single t=1 ⇒ (N(x+k) − N(x+1))/D < 0 при k ≥ 2 — в эталоне вырождено;
+  // актуарно корректно 0 (после года 0 взносов нет), поэтому clamp. При рассрочке
+  // t = n ⇒ NxtO = Nxn и clamp никогда не срабатывает (aT = aN ≥ 0).
+  const aT_ = k => { const d = D(baseAge + k); return d > 0 ? Math.max(0, (N(baseAge + k) - NxtO) / d) : 0; };
+
+  // Нагрузки. В эталоне (Excel «Параметры i»):
+  //   • G6 / G7 — по ИСХОДНОМУ сроку n (формула =INDEX(N1:N13, MIN(n-2,13)))
+  //   • G2 / G3 — по исходному сроку оплаты t, но
+  //       G2 = IF(n-n_iz>0, 0, ROUNDUP(...))  → обнуляется при m ≥ 1
+  //       G3 = IF(n-n_iz>1, 0, ROUNDUP(...))  → обнуляется при m ≥ 2
+  const { G6, G7 } = getG6G7(config, term);                      // по исходному n
+  const rawG2G3    = getG2G3(config, term, isSingle);            // по исходному t
+
   const rows = [];
   // Срок индексации фиксированный: term - 1 (год 0 = базовый, до года term-1 включительно).
   // При n=10 → строки Y0..Y9 (10 строк), при n=5 → Y0..Y4 (5 строк).
   const maxM = term - 1;
+
+  let Vx = 0;  // накопленный резерв Vx_m («Данные i»!J7); Vx_0 = 0 (E53 = 0)
 
   for (let m = 0; m <= maxM; m++) {
     const ageM           = baseAge + m;
@@ -134,74 +175,32 @@ export function calculateIndexationSchedule(params) {
       break;
     }
 
-    // Индексированная страховая сумма
+    // Индексированная страховая сумма («Данные i»!C15 = I7 = G7 × (1 + ставка))
     const saM = initialSumAssured * Math.pow(1 + indexRate, m);
-
-    // Ставка доходности (для Saqtau Senim — всегда 7 % в Excel-эталоне)
-    const rate = engine.getInterestRate(frequency, remainingTerm);
-    const comm = engine.getCommutationTable(gender, 1.0, 0.0, rate);
-
-    // Актуарные величины при возрасте ageM (= x_iz эталона).
-    //
-    // ВАЖНО: эталон Excel «Расчет i» использует разные возрасты в разных
-    // ячейках (defined names x = Параметры!C7 = ИСХОДНЫЙ возраст, x_iz =
-    // Параметры i!D7 = возраст на дату индексации):
-    //   B1 (Dx)   = D(x_iz)
-    //   B2 (Dx+1) = D(x + 1)             ← исходный возраст
-    //   B5 (Dx+n) = D(x + n)             ← исходный возраст и срок
-    //   B7 (Nx)   = N(x_iz)
-    //   B8 (Nx+n) = N(x + n)             ← исходный
-    //   B9 (Nx+t) = N(x_iz + n)          ← новый x_iz, исходный n
-    //   B11 (Mx)  = M(x_iz)
-    //   B12 (Mx+n)= M(x + n)             ← исходный
-    //
-    // (x_iz + n) = (ageM + term), а (x + n) = (baseAge + term) = тот же
-    // конечный возраст. (x + 1) = (baseAge + 1) — НЕ ageM + 1!
-    const Dx     = comm.Dx(ageM);
-    const Dxn    = comm.Dx(baseAge + term);            // = D(x + n)
-    const Dx1    = comm.Dx(baseAge + 1);               // = D(x + 1), исходный возраст
-    const Mx     = comm.Mx(ageM);
-    const Mxn    = comm.Mx(baseAge + term);            // = M(x + n)
-    const Nx     = comm.Nx(ageM);
-    const Nxn    = comm.Nx(baseAge + term);            // = N(x + n)
-    const Nxt    = comm.Nx(ageM + (isSingle ? 1 : term));  // = N(x_iz + n)
-
-    const Ax_n = Dx > 0 ? (Mx - Mxn + Dxn) / Dx : 0;
-    const ax_n = Dx > 0 ? (Nx - Nxn) / Dx       : 0;
-    const ax_t = Dx > 0 ? (Nx - Nxt) / Dx       : 0;
-
-    // Нагрузки. В эталоне (Excel «Параметры i»):
-    //   • G6 / G7 — по ИСХОДНОМУ сроку n (формула =INDEX(N1:N13, MIN(n-2,13)))
-    //   • G2 / G3 — по исходному сроку оплаты t, но
-    //       G2 = IF(n-n_iz>0, 0, ROUNDUP(...))  → обнуляется при m ≥ 1
-    //       G3 = IF(n-n_iz>1, 0, ROUNDUP(...))  → обнуляется при m ≥ 2
-    const { G6, G7 } = getG6G7(config, term);                      // по исходному n
-    const rawG2G3    = getG2G3(config, term, isSingle);            // по исходному t
 
     const G2 = m >= 1 ? 0 : rawG2G3.G2;
     const G3 = m >= 2 ? 0 : rawG2G3.G3;
 
-    // Брутто-ставка года m
-    const num = Ax_n + G7 * ax_n;
-    const den = ax_t - G6 * ax_t - (G2 + G3 * Dx1 / Dx);
-    const BP  = den > 0 ? num / den : 0;
+    // Верхний блок «Расчет i»: F1 = (M(x_iz) − M(x+n) + D(x+n))/D(x_iz) и т.д.
+    // При x_iz = x+m эти значения совпадают с кривыми исходного полиса на год m.
+    const Dx   = D(ageM);
+    const F1   = A_(m);                                    // Ax:n
+    const F2   = aN_(m);                                   // ax:n
+    const F3   = isSingle
+      ? (Dx > 0 ? (N(ageM) - N(ageM + 1)) / Dx : 0)        // = 1 (рента на 1 платёж)
+      : F2;                                                // B9 = N(x+t) исходные ⇒ ax:t = ax:n
 
-    // Премия основного покрытия года m.
-    //
-    // ПРИМЕЧАНИЕ ОБ ЭТАЛОНЕ:
-    // В Excel-эталоне формула F8 = ROUND(BP × (СС_новая − F9) × ff, 0), где
-    // F9 = ROUND(Vx_m / (Ax:n + G7×ax:n), 0), а Vx_m — накопленный резерв
-    // на момент m. Значения Vx_m заполняются макросом
-    // Final_Stable_Macro_HiddenSheet через итеративный процесс с записью
-    // в таблицу 'Данные i'!H54:H104, и без доступа к этой таблице
-    // воспроизвести их детерминированно нельзя.
-    //
-    // Поэтому здесь используется упрощённая модель «полная новая премия
-    // для индексированной СС с пересчётом BP под новый возраст и срок».
-    // На Y0 совпадает с эталоном идеально, далее — приближённо
-    // (расхождение растёт к последним годам, итого ~94 % от страховой
-    // суммы вместо 99 % в эталоне).
-    const mainPremium = roundHalfUp(BP * saM * freqFactor);
+    // Брутто-ставка года m («Расчет i»!F7). В alfa-части — B2/B1 = D(x+1)/D(x_iz):
+    // исходный возраст x+1 в числителе, текущий x_iz в знаменателе.
+    const den = F3 - G6 * F3 - (G2 + G3 * D(baseAge + 1) / Dx);
+    const BP  = den > 0 ? (F1 + G7 * F2) / den : 0;
+
+    // F9 — «оплаченная» резервом часть СС («Расчет i»!F9)
+    const denF9 = F1 + G7 * F2;
+    const F9 = m > 0 && denF9 > 0 ? roundHalfUp(Vx / denF9) : 0;
+
+    // Премия основного покрытия года m — ДОПЛАТА за прирост СС («Расчет i»!F8)
+    const mainPremium = roundHalfUp(BP * (saM - F9) * freqFactor);
 
     // ── Премии всех включённых рейдеров (для отображения «итого» в таблице) ──
     // SA-linked рейдеры считаются с новой СС (saM); fixed-sum — со своей суммой.
@@ -231,22 +230,24 @@ export function calculateIndexationSchedule(params) {
     }
     const premium = mainPremium + ridersPremium;
 
-    // Резерв/выкуп на КОНЕЦ года 1 (для отображения первого года полиса m)
-    // У single t=1, поэтому alpha при k=1: только G3 (если он > 0)
-    const Mx1 = comm.Mx(ageM + 1);
-    const Nx1 = comm.Nx(ageM + 1);
-    const Ax_n_1 = Dx1 > 0 ? (Mx1 - Mxn + Dxn) / Dx1 : 0;
-    const ax_n_1 = Dx1 > 0 ? (Nx1 - Nxn) / Dx1       : 0;
-    const ax_t_1 = remainingTerm > 1 && Dx1 > 0
-      ? (Nx1 - Nxt) / Dx1 : 0;
-    const alpha_1 = G3;
-    const reserveRate   = Ax_n_1 + G7 * ax_n_1 - BP * (ax_t_1 - G6 * ax_t_1 - alpha_1);
-    const surrenderRate = reserveRate - (1 - reserveRate) * surrenderPenalty;
-    const reserve   = Math.max(reserveRate * saM, 0);
+    // ── Накопление резерва: Vx на годовщину m+1, посчитанный в состоянии m ──
+    // («Данные i» E[53+m+1] = ROUND('Расчет i'!I[18+k] × (C15 − F9) + 'Расчет i'!J[18+k]), k = m+1)
+    const k     = m + 1;
+    const alfa  = k === 1 ? G3 : 0;                        // H19 = G3 (G4 = G5 = 0); H20+ = 0
+    const Ak    = A_(k);
+    const Irate = Ak + G7 * aN_(k) - BP * (aT_(k) * (1 - G6) - alfa);
+    const VxNext = roundHalfUp(Irate * (saM - F9) + F9 * Ak);
+
+    // Резерв/выкупная на конец года m (= годовщина m+1) — эталонные колонки K/L/M:
+    //   L = I − (1−I)×штраф; J = F9×A(k); K = J − (F9−J)×штраф; M = max(L,0)×(СС−F9) + K
+    const Lrate = Irate - (1 - Irate) * surrenderPenalty;
+    const Jres  = F9 * Ak;
+    const Kres  = Jres - (F9 - Jres) * surrenderPenalty;
+    const reserve   = Math.max(VxNext, 0);
     const surrender = remainingTerm === 1
       ? saM   // дожитие
-      : Math.max(surrenderRate * saM, 0);
-    const reducedSA = Ax_n_1 > 0 ? roundHalfUp(surrender / Ax_n_1) : 0;
+      : Math.max(roundHalfUp(Math.max(Lrate, 0) * (saM - F9) + Kres), 0);
+    const reducedSA = Ak > 0 ? roundHalfUp(surrender / Ak) : 0;
 
     // Дата годовщины: baseDate + m лет
     const date = new Date(baseDate.getTime());
@@ -272,6 +273,8 @@ export function calculateIndexationSchedule(params) {
       surrender:      Math.round(surrender * 100) / 100,
       reducedSA,
     });
+
+    Vx = VxNext;
   }
 
   return rows;
