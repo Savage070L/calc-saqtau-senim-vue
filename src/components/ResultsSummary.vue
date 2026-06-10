@@ -53,6 +53,19 @@
         </div>
       </div>
     </div>
+
+    <!-- ── Итоги с учётом индексации (такие же бейджи, как сверху) ── -->
+    <div v-if="hasIndexation" class="top-badges idx-badges">
+      <div class="summary-badge badge-sa">
+        <span class="badge-label" v-fit-text="{ min: 9, max: 15 }">{{ t('results.sumAssuredIdx') }} <InfoTooltip v-bind="tip('sumAssuredIdx')" /></span>
+        <span class="badge-value" v-fit-text="idxBadgeFitOpts">{{ fmtTopValue(animated.idxSumAssured) }}</span>
+      </div>
+
+      <div class="summary-badge badge-premium">
+        <span class="badge-label" v-fit-text="{ min: 9, max: 15 }">{{ t('results.totalPremiumIdx') }} <InfoTooltip v-bind="tip('totalPremiumIdx')" /></span>
+        <span class="badge-value" v-fit-text="idxBadgeFitOpts">{{ fmtTopValue(animated.idxTotalPremium) }}</span>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -104,7 +117,7 @@ const FREQ_LABELS = computed(() => dict.value.form.freq);
 const ANNUITY_FREQ_LABELS = computed(() => dict.value.form.annuityFreq);
 const RIDER_LABELS = computed(() => dict.value.results.riderLabels);
 
-const animated = reactive({ sumAssured: 0, grossPremium: 0, totalPremium: 0, annuityPayment: 0 });
+const animated = reactive({ sumAssured: 0, grossPremium: 0, totalPremium: 0, annuityPayment: 0, idxSumAssured: 0, idxTotalPremium: 0 });
 const animatedRiders = reactive({});
 
 const annuityFreqLabel = computed(() => ANNUITY_FREQ_LABELS.value[props.result?.annuity?.annuityFrequency] ?? ANNUITY_FREQ_LABELS.value.annual);
@@ -130,6 +143,29 @@ const coverageRows = computed(() =>
     .filter(([n, r]) => RIDER_LABELS.value[n] && (r?.riderPremium ?? 0) > 0)
     .map(([n, r]) => ({ key: n, label: RIDER_LABELS.value[n], sum: r.riderSum ?? 0, premium: r.riderPremium ?? 0 }))
 );
+
+// ── Итоги с учётом индексации (значения = строке «Итого» таблицы индексации) ──
+// premium в строке графика — взнос ЗА ОДИН ПЕРИОД, поэтому итог умножается
+// на число платежей в году (как в IndexationTable.vue).
+const PAYMENTS_PER_YEAR = {
+  annual: 1, semiannual: 2, quarterly: 4, monthly: 12, single: 1,
+};
+const idxRows = computed(() => props.result?.indexationSchedule ?? []);
+const hasIndexation = computed(() =>
+  (props.result?.enableIndexation ?? false) && idxRows.value.length > 0
+);
+// СС с учётом индексации = СС последнего года (максимальная, т.к. растёт монотонно)
+const idxSumAssured = computed(() =>
+  idxRows.value.reduce((m, r) => Math.max(m, r.sumAssured || 0), 0)
+);
+// Итого премий = сумма всех взносов за весь срок с учётом индексации
+const idxTotalPremium = computed(() => {
+  const sum  = idxRows.value.reduce((s, r) => s + (r.premium || 0), 0);
+  const mult = PAYMENTS_PER_YEAR[props.result?.frequency] ?? 1;
+  return sum * mult;
+});
+// У индексационных бейджей значения длиннее — ограничиваем максимум сильнее
+const idxBadgeFitOpts = { min: 18, max: 58 };
 
 function fmt(v) { return formatMoney(v) + '\u00A0₸'; }
 
@@ -165,6 +201,8 @@ watch(() => props.result, (r) => {
   animateTo('grossPremium', r.grossPremium);
   animateTo('totalPremium', r.totalPremium ?? r.grossPremium);
   animateTo('annuityPayment', r.annuityPayment ?? 0);
+  animateTo('idxSumAssured', idxSumAssured.value);
+  animateTo('idxTotalPremium', idxTotalPremium.value);
   Object.entries(r.riders ?? {}).forEach(([key, rider]) => {
     if ((rider?.riderPremium ?? 0) > 0) {
       animateRider(key, rider.riderPremium ?? 0, rider.riderSum ?? 0);
@@ -351,6 +389,9 @@ watch(() => props.result, (r) => {
 .top-badges.has-annuity .badge-value {
   font-size: 58px;
 }
+/* Бейджи «с учётом индексации» — после детализации; значения длиннее → шрифт меньше */
+.idx-badges { animation: fadeInCard 0.45s ease-out both; }
+.idx-badges .badge-value { font-size: 58px; }
 
 /* ── Badge color themes ───────────────── */
 .badge-sa {

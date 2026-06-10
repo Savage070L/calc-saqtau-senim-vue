@@ -192,44 +192,9 @@
         </span>
         <span class="toggle-text">{{ t('form.enableIndexation') }}</span>
         <InfoTooltip v-bind="tip('indexation')" />
-        <span class="toggle-arrow">{{ local.enableIndexation ? '▲' : '▼' }}</span>
+        <!-- Ставка фиксированная (6 %), выбора нет — показываем как бейдж -->
+        <span v-if="local.enableIndexation" class="idx-rate-badge">{{ local.indexRate }}&nbsp;%</span>
       </label>
-    </div>
-
-    <div v-if="local.enableIndexation" class="form-grid annuity-grid">
-      <!-- Ставка индексации — слайдер в стиле «Срок страхования» -->
-      <div class="form-group term-group full-width">
-        <div class="term-header">
-          <label class="label-row">
-            {{ t('form.indexRate') }}
-            <InfoTooltip v-bind="tip('indexRate')" />
-          </label>
-          <span class="term-badge">
-            <input
-              type="text"
-              inputmode="decimal"
-              :value="formatIndexRate(local.indexRate)"
-              @focus="onIndexRateFocus"
-              @input="onIndexRateInput"
-              @blur="onIndexRateBlur"
-              @keydown.enter.prevent="$event.target.blur()"
-              :style="{ width: indexRateInputWidth }"
-              class="term-badge-input"
-              aria-label="Ставка индексации"
-            />
-            <span class="term-badge-word">%</span>
-          </span>
-        </div>
-        <input
-          type="range"
-          v-model.number="local.indexRate"
-          min="0.5"
-          max="20"
-          step="0.5"
-          :style="indexRateSliderStyle"
-          class="term-slider"
-        />
-      </div>
     </div>
 
     <div v-if="local.enableAnnuity" class="form-grid annuity-grid">
@@ -526,39 +491,7 @@ const guaranteedPeriodSliderStyle = computed(() => {
   };
 });
 
-// ── Ставка индексации (слайдер 0.5 .. 20 %, шаг 0.5) ──
-const indexRateSliderStyle = computed(() => {
-  const min = 0.5, max = 20, val = local.value.indexRate ?? 7;
-  const pct = max > min ? ((val - min) / (max - min)) * 100 : 0;
-  return {
-    background: `linear-gradient(to right, #5C8E2F 0%, #A1C95A ${pct}%, rgba(255,255,255,0.22) ${pct}%, rgba(255,255,255,0.14) 100%)`,
-  };
-});
-const indexRateInputWidth = computed(() => {
-  // Делаем ширину «прыгающего» бейджа стабильной: 3 символа всегда
-  const s = String(local.value.indexRate ?? 7);
-  return `${Math.max(s.length, 3) * 9}px`;
-});
-function formatIndexRate(v) {
-  const n = Number(v);
-  if (!Number.isFinite(n)) return '';
-  // Без дробной если целое; иначе 1 знак (для .5)
-  return Math.round(n) === n ? String(n) : n.toFixed(1);
-}
-function onIndexRateFocus(e) { e.target.select(); }
-function onIndexRateInput(e) {
-  // Допускаем 0.5..20, поддерживаем ввод с точкой/запятой
-  const raw = String(e.target.value).replace(',', '.').replace(/[^\d.]/g, '');
-  const n = parseFloat(raw);
-  if (Number.isFinite(n)) local.value.indexRate = Math.max(0.5, Math.min(20, n));
-}
-function onIndexRateBlur(e) {
-  // На выходе — округляем к шагу 0.5 для соответствия слайдеру
-  const n = Number(local.value.indexRate);
-  if (!Number.isFinite(n)) { local.value.indexRate = 7; return; }
-  const stepped = Math.round(n * 2) / 2;
-  local.value.indexRate = Math.max(0.5, Math.min(20, stepped));
-}
+// Ставка индексации фиксированная — 6 % (выбора в UI нет, см. idx-rate-badge)
 </script>
 
 <style scoped>
@@ -950,6 +883,21 @@ input[type="date"].neu-input::-webkit-calendar-picker-indicator:hover { opacity:
   flex: 1;
 }
 .toggle-arrow { font-size: 10px; color: #5FBDF5; }
+
+/* Фиксированная ставка индексации — статичный бейдж справа в строке тоггла */
+.idx-rate-badge {
+  margin-left: auto;
+  font-family: 'SF Mono', 'Menlo', monospace;
+  font-size: 15px;
+  font-weight: 800;
+  color: #A1C95A;
+  background: rgba(161, 201, 90, 0.15);
+  border: 1px solid rgba(161, 201, 90, 0.40);
+  border-radius: 10px;
+  padding: 4px 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 
 .annuity-grid {
   margin-top: 12px; padding: 12px; border-radius: 12px;

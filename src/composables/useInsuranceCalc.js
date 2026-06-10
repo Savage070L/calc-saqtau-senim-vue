@@ -165,7 +165,7 @@ export function useInsuranceCalc() {
         annuityTerm = 0,
         guaranteedPeriod = 0,
         enableIndexation = false,
-        indexRate = 7,        // в процентах: 7 == 7 %
+        indexRate = 6,        // в процентах: 6 == 6 % (ставка фиксированная, выбора в UI нет)
         riders: ridersSelection = {},
         kMult = 1.0,
         lAdd = 0.0,
