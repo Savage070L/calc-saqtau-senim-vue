@@ -27,7 +27,8 @@
         </tbody>
         <tfoot>
           <tr class="row-total">
-            <td colspan="2" class="col-total-label">{{ t('indexation.totalLabel') }}</td>
+            <td class="col-num col-total-label">{{ t('indexation.totalLabel') }}</td>
+            <td class="col-date col-total-period">{{ totalPeriod }}</td>
             <td class="num col-prem col-total-value">{{ fmt(totalPremium) }}</td>
             <td class="num col-sa col-total-value">{{ fmt(maxSA) }}</td>
           </tr>
@@ -51,11 +52,36 @@ const props = defineProps({
 const open = ref(true);
 
 const rows = computed(() => props.result?.indexationSchedule ?? []);
+
+// Сколько РЕАЛЬНЫХ платежей клиент делает за каждый год индексации.
+// Значение `premium` в строке — это сумма ЗА ОДИН ПЕРИОД (как в эталоне:
+// для monthly — месячный взнос, для quarterly — квартальный и т.д.).
+// Чтобы ИТОГО = полная сумма всех уплаченных денег за срок, нужно
+// умножить на количество платежей в году.
+const PAYMENTS_PER_YEAR = {
+  annual: 1, semiannual: 2, quarterly: 4, monthly: 12, single: 1,
+};
+
 // Итого:
-//   • по премии — сумма всех значений
+//   • по премии — сумма всех значений × платежей в году (полная сумма всех уплат)
 //   • по СС    — максимальное значение (= СС последнего года, т.к. СС монотонно растёт)
-const totalPremium = computed(() => rows.value.reduce((s, r) => s + (r.premium || 0), 0));
-const maxSA        = computed(() => rows.value.reduce((m, r) => Math.max(m, r.sumAssured || 0), 0));
+const totalPremium = computed(() => {
+  const sum  = rows.value.reduce((s, r) => s + (r.premium || 0), 0);
+  const freq = props.result?.frequency || 'annual';
+  const mult = PAYMENTS_PER_YEAR[freq] ?? 1;
+  return sum * mult;
+});
+const maxSA = computed(() => rows.value.reduce((m, r) => Math.max(m, r.sumAssured || 0), 0));
+
+// Период итого = диапазон от даты первого периода до конца последнего
+const totalPeriod = computed(() => {
+  if (rows.value.length === 0) return '';
+  const first = rows.value[0]?.date;
+  const last  = rows.value[rows.value.length - 1]?.dateEnd;
+  if (!first || !last) return '';
+  const f = (iso) => { const [y,m,d] = iso.split('-'); return `${d}.${m}.${y}`; };
+  return `${f(first)} – ${f(last)}`;
+});
 
 function fmt(v) {
   if (v === null || v === undefined || Number.isNaN(v)) return '—';
@@ -101,6 +127,8 @@ function formatPeriod(r) {
 .ix-toggle.expanded { padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.10); margin-bottom: 10px; }
 
 .ix-wrap {
+  /* На десктопе оставляем скролл как резерв, на мобильном — табл.layout=fixed
+     и word-break=break-word делают так, что таблица всегда помещается. */
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
@@ -154,8 +182,38 @@ function formatPeriod(r) {
 }
 
 @media (max-width: 720px) {
-  .ix-table { font-size: 13px; }
-  .ix-table th, .ix-table td { padding: 8px 10px; }
-  .ix-table th { font-size: 11px; }
+  /* На мобильных таблица должна помещаться без горизонтального скролла:
+     − скрываем колонку «№» (она не несёт смысла, есть период)
+     − форматирование дат «10.06.2026 – 10.06.2027» переносится на 2 строки
+     − суммы в одну строку, но компактным шрифтом
+     − убираем внутренние padding'и до минимума */
+  .ix-wrap { overflow-x: hidden; }
+  .ix-table { font-size: 12px; table-layout: fixed; width: 100%; }
+  .ix-table th, .ix-table td {
+    padding: 6px 4px;
+    white-space: normal;
+    word-break: keep-all;
+    line-height: 1.25;
+  }
+  .ix-table th  { font-size: 9.5px; letter-spacing: 0.02em; }
+  /* Колонка № — лишняя на мобильном */
+  .ix-table th:first-child,
+  .ix-table td:first-child { display: none; }
+  /* Колонка периода — даём ей больше места */
+  .ix-table th:nth-child(2),
+  .ix-table td:nth-child(2) { width: 38%; }
+  .ix-table th:nth-child(3),
+  .ix-table td:nth-child(3),
+  .ix-table th:nth-child(4),
+  .ix-table td:nth-child(4) { width: 31%; }
+
+  .row-total td { font-size: 13px !important; padding: 8px 4px !important; }
+  /* Раз колонка № скрыта — перед диапазоном дат добавляем метку «ИТОГО» */
+  .row-total .col-total-period::before {
+    content: 'ИТОГО · ';
+    font-weight: 800;
+    color: #FFFFFF;
+    letter-spacing: 0.04em;
+  }
 }
 </style>
