@@ -74,6 +74,7 @@ export default {
     colPeriod: 'Период оплаты взносов',
     colPremium: 'Размер периодичной страховой взносов',
     colSA: 'Размер страховой суммы',
+    totalLabel: 'Итого',
   },
 
   riders: {

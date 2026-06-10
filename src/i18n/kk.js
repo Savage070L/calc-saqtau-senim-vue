@@ -74,6 +74,7 @@ export default {
     colPeriod: 'Жарна төлеу кезеңі',
     colPremium: 'Кезеңдік сақтандыру жарнасының мөлшері',
     colSA: 'Сақтандыру сомасының мөлшері',
+    totalLabel: 'Барлығы',
   },
 
   riders: {

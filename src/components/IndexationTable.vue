@@ -25,6 +25,13 @@
             <td class="num col-sa">{{ fmt(r.sumAssured) }}</td>
           </tr>
         </tbody>
+        <tfoot>
+          <tr class="row-total">
+            <td colspan="2" class="col-total-label">{{ t('indexation.totalLabel') }}</td>
+            <td class="num col-prem col-total-value">{{ fmt(totalPremium) }}</td>
+            <td class="num col-sa col-total-value">{{ fmt(maxSA) }}</td>
+          </tr>
+        </tfoot>
       </table>
     </div>
   </div>
@@ -44,6 +51,11 @@ const props = defineProps({
 const open = ref(true);
 
 const rows = computed(() => props.result?.indexationSchedule ?? []);
+// Итого:
+//   • по премии — сумма всех значений
+//   • по СС    — максимальное значение (= СС последнего года, т.к. СС монотонно растёт)
+const totalPremium = computed(() => rows.value.reduce((s, r) => s + (r.premium || 0), 0));
+const maxSA        = computed(() => rows.value.reduce((m, r) => Math.max(m, r.sumAssured || 0), 0));
 
 function fmt(v) {
   if (v === null || v === undefined || Number.isNaN(v)) return '—';
@@ -122,6 +134,24 @@ function formatPeriod(r) {
 .col-date { color: #B3D9FF; }
 .col-prem { color: #FFFFFF; font-weight: 600; }
 .col-sa   { color: #A1C95A; font-weight: 700; }
+
+/* ── Итого ── */
+.row-total td {
+  background: linear-gradient(135deg, rgba(161,201,90,0.25), rgba(92,142,47,0.25)) !important;
+  border-top: 2px solid #A1C95A;
+  font-size: 16px;
+  padding: 12px 14px;
+}
+.col-total-label {
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #FFFFFF;
+}
+.col-total-value {
+  font-weight: 800;
+  font-family: 'SF Mono', 'Menlo', monospace;
+}
 
 @media (max-width: 720px) {
   .ix-table { font-size: 13px; }
