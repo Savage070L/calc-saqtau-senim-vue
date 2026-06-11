@@ -163,6 +163,26 @@ export function calculateIndexationSchedule(params) {
   // При n=10 → строки Y0..Y9 (10 строк), при n=5 → Y0..Y4 (5 строк).
   const maxM = term - 1;
 
+  // ── Константная часть рейдеров ──────────────────────────────────────────
+  // Эталон («Данные» AB7+ = $F$27+$F$29+$F$31+$F$33+$F$41 + 'Данные i'!H):
+  // fixed-sum рейдеры и КЗ в клиентском графике НЕ пересчитываются по
+  // годовщинам — берутся премии на дату выпуска. Пересчитываются только
+  // основное покрытие, SA-linked рейдеры и waiver (они в составе H).
+  let fixedRidersPremium0 = 0;
+  if (ridersSelection && ridersCalc) {
+    const t0 = isSingle ? 1 : term;
+    for (const rk of FIXED_SUM_KEYS) {
+      const sel = ridersSelection[rk];
+      if (sel?.enabled && (sel.sum ?? 0) > 0) {
+        fixedRidersPremium0 += ridersCalc.calculateSimpleRider(rk, sel.sum, term, frequency).riderPremium;
+      }
+    }
+    const ciSel = ridersSelection.critical_illness;
+    if (ciSel?.enabled && (ciSel.sum ?? 0) > 0) {
+      fixedRidersPremium0 += ridersCalc.calculateCIRider(baseAge, term, t0, gender, ciSel.sum, frequency).riderPremium;
+    }
+  }
+
   let Vx = 0;  // накопленный резерв Vx_m («Данные i»!J7); Vx_0 = 0 (E53 = 0)
 
   for (let m = 0; m <= maxM; m++) {
@@ -203,9 +223,9 @@ export function calculateIndexationSchedule(params) {
     const mainPremium = roundHalfUp(BP * (saM - F9) * freqFactor);
 
     // ── Премии всех включённых рейдеров (для отображения «итого» в таблице) ──
-    // SA-linked рейдеры считаются с новой СС (saM); fixed-sum — со своей суммой.
-    // Возраст и срок — текущие (ageM, remainingTerm). CI пересчитывается актуарно.
-    let ridersPremium = 0;
+    // SA-linked рейдеры считаются с новой СС (saM) — они в составе «Данные i»!H.
+    // Fixed-sum и КЗ — константы выпуска (fixedRidersPremium0, см. выше).
+    let ridersPremium = fixedRidersPremium0;
     if (ridersSelection && ridersCalc) {
       const tCur = isSingle ? 1 : remainingTerm;
       for (const rk of SA_LINKED_KEYS) {
@@ -213,17 +233,7 @@ export function calculateIndexationSchedule(params) {
           ridersPremium += ridersCalc.calculateSimpleRider(rk, saM, remainingTerm, frequency).riderPremium;
         }
       }
-      for (const rk of FIXED_SUM_KEYS) {
-        const sel = ridersSelection[rk];
-        if (sel?.enabled && (sel.sum ?? 0) > 0) {
-          ridersPremium += ridersCalc.calculateSimpleRider(rk, sel.sum, remainingTerm, frequency).riderPremium;
-        }
-      }
-      const ciSel = ridersSelection.critical_illness;
-      if (ciSel?.enabled && (ciSel.sum ?? 0) > 0) {
-        ridersPremium += ridersCalc.calculateCIRider(ageM, remainingTerm, tCur, gender, ciSel.sum, frequency).riderPremium;
-      }
-      // Premium waiver — при single или t≤1 = 0; иначе считается от mainPremium
+      // Premium waiver — в эталоне входит в H (пересчитывается на i-листах)
       if (ridersSelection.premium_waiver?.enabled) {
         ridersPremium += ridersCalc.calculateWaiverRider(ageM, remainingTerm, tCur, gender, saM, BP, frequency).riderPremium;
       }
