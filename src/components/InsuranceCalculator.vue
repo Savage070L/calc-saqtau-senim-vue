@@ -104,7 +104,11 @@
           </svg>
         </div>
         <h3 class="ph-title">{{ t('placeholder.title') }}</h3>
-        <p class="ph-subtitle">{{ t('placeholder.subtitle') }}</p>
+        <!-- На десктопе форма слева, на мобильном (колонки в столбик) — выше -->
+        <p class="ph-subtitle">
+          <span class="ph-sub-desktop">{{ t('placeholder.subtitle') }}</span>
+          <span class="ph-sub-mobile">{{ t('placeholder.subtitleMobile') }}</span>
+        </p>
         <ul class="ph-steps">
           <li class="ph-step" :class="{ 'ph-step-done': step1Done }">
             <span class="ph-step-num">{{ step1Done ? '✓' : '1' }}</span>
@@ -212,11 +216,12 @@ watch(() => formData.value.riders, (val) => {
   if (JSON.stringify(val) !== initialRidersSnapshot) ridersTouched.value = true;
 }, { deep: true });
 
-// Visual hint: once main form is complete and riders are still untouched,
-// highlight the riders card to invite the user to add coverages.
-// Stops pulsing once the user has clicked "Рассчитать".
+// Visual hint: once steps 1-5 are explicitly done (включая ЯВНЫЙ выбор срока —
+// у term есть дефолт 10, поэтому isFormComplete здесь не годится) and riders
+// are still untouched, highlight the riders card to invite the user to add
+// coverages. Stops pulsing once the user has clicked "Рассчитать".
 const needsRiders = computed(() =>
-  isFormComplete.value && !ridersTouched.value && !manuallyTriggered.value
+  allStepsDone.value && !ridersTouched.value && !manuallyTriggered.value
 );
 
 // User interaction flags (set true only on explicit input completion).
@@ -848,6 +853,13 @@ watch(result, (r, prev) => {
   text-align: center;
   max-width: 380px;
   line-height: 1.4;
+}
+/* Текст подзаголовка зависит от раскладки: «слева» (две колонки) / «выше»
+   (колонки в столбик, ≤1120px — тот же брейкпоинт, что у result-section-header) */
+.ph-sub-mobile { display: none; }
+@media (max-width: 1120px) {
+  .ph-sub-desktop { display: none; }
+  .ph-sub-mobile  { display: inline; }
 }
 .ph-steps {
   position: relative;

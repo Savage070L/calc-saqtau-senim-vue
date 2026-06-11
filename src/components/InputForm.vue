@@ -79,7 +79,7 @@
       </div>
 
       <!-- Сумма взноса / Страховая сумма — на всю ширину под режимом и периодичностью -->
-      <div class="form-group full-width" v-if="local.mode === 'sa_to_premium'" :class="{ 'attention-next': needsAmount }">
+      <div class="form-group full-width amount-group" v-if="local.mode === 'sa_to_premium'" :class="{ 'attention-next': needsAmount }">
         <label for="sumAssured" class="label-row">
           {{ t('form.sumAssured') }} (KZT)
           <InfoTooltip v-bind="tip('sumAssured')" />
@@ -91,8 +91,9 @@
             type="text"
             inputmode="numeric"
             autocomplete="off"
-            :value="needsAmount ? t('form.nextStepAmount') : displaySumAssured"
-            :class="['neu-input', { 'hint-mode': needsAmount }]"
+            :value="needsAmount ? '' : displaySumAssured"
+            :placeholder="needsAmount ? t('form.nextStepAmount') : ''"
+            class="neu-input"
             @focus="markAmountTouched"
             @input="(e) => { markAmountTouched(); onSumInput(e); maybeAutoCommit(e); }"
             @blur="commitAmount"
@@ -100,9 +101,10 @@
           />
           <span v-if="!needsAmount" class="input-affix input-suffix">₸</span>
         </div>
+        <span v-if="needsAmount" class="next-pill">{{ t('form.nextStepSumAssured') }}</span>
       </div>
 
-      <div class="form-group full-width" v-if="local.mode === 'premium_to_sa'" :class="{ 'attention-next': needsAmount }">
+      <div class="form-group full-width amount-group" v-if="local.mode === 'premium_to_sa'" :class="{ 'attention-next': needsAmount }">
         <label for="premium" class="label-row">
           {{ t('form.premium') }} (KZT)
           <InfoTooltip v-bind="tip('premium')" />
@@ -114,8 +116,9 @@
             type="text"
             inputmode="numeric"
             autocomplete="off"
-            :value="needsAmount ? t('form.nextStepAmount') : displayPremium"
-            :class="['neu-input', { 'hint-mode': needsAmount }]"
+            :value="needsAmount ? '' : displayPremium"
+            :placeholder="needsAmount ? t('form.nextStepAmount') : ''"
+            class="neu-input"
             @focus="markAmountTouched"
             @input="(e) => { markAmountTouched(); onPremInput(e); maybeAutoCommit(e); }"
             @blur="commitAmount"
@@ -123,6 +126,7 @@
           />
           <span v-if="!needsAmount" class="input-affix input-suffix">₸</span>
         </div>
+        <span v-if="needsAmount" class="next-pill">{{ t('form.nextStepPremium') }}</span>
       </div>
 
       <!-- Срок страхования — слайдер, на всю ширину -->
@@ -171,6 +175,18 @@
 
     </div>
 
+    <!-- ── ИНДЕКСАЦИЯ (ставка фиксированная 6 %, в UI не показывается) ──── -->
+    <div class="annuity-toggle-wrap">
+      <label class="annuity-toggle-label">
+        <span class="toggle-icon-wrap">
+          <input type="checkbox" v-model="local.enableIndexation" class="annuity-chk" />
+          <span class="custom-chk"></span>
+        </span>
+        <span class="toggle-text">{{ t('form.enableIndexation') }}</span>
+        <InfoTooltip v-bind="tip('indexation')" />
+      </label>
+    </div>
+
     <div class="annuity-toggle-wrap">
       <label class="annuity-toggle-label">
         <span class="toggle-icon-wrap">
@@ -180,20 +196,6 @@
         <span class="toggle-text">{{ t('form.enableAnnuity') }}</span>
         <InfoTooltip v-bind="tip('annuity')" />
         <span class="toggle-arrow">{{ local.enableAnnuity ? '▲' : '▼' }}</span>
-      </label>
-    </div>
-
-    <!-- ── ИНДЕКСАЦИЯ ──────────────────────────────────────────────────── -->
-    <div class="annuity-toggle-wrap">
-      <label class="annuity-toggle-label">
-        <span class="toggle-icon-wrap">
-          <input type="checkbox" v-model="local.enableIndexation" class="annuity-chk" />
-          <span class="custom-chk"></span>
-        </span>
-        <span class="toggle-text">{{ t('form.enableIndexation') }}</span>
-        <InfoTooltip v-bind="tip('indexation')" />
-        <!-- Ставка фиксированная (6 %), выбора нет — показываем как бейдж -->
-        <span v-if="local.enableIndexation" class="idx-rate-badge">{{ local.indexRate }}&nbsp;%</span>
       </label>
     </div>
 
@@ -880,17 +882,6 @@ input[type="date"].neu-input::-webkit-calendar-picker-indicator:hover { opacity:
 }
 .toggle-arrow { font-size: 10px; color: #5FBDF5; }
 
-/* Фиксированная ставка индексации — просто значение справа в строке тоггла */
-.idx-rate-badge {
-  margin-left: auto;
-  font-family: 'SF Mono', 'Menlo', monospace;
-  font-size: 15px;
-  font-weight: 800;
-  color: #A1C95A;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
 .annuity-grid {
   margin-top: 12px; padding: 12px; border-radius: 12px;
   border: 1px solid var(--border-color);
@@ -1079,10 +1070,11 @@ input[type="date"].neu-input::-webkit-calendar-picker-indicator:hover { opacity:
   }
 
   /* Reorder blocks on mobile to match the step sequence:
-     DOB → Gender → Sum/Frequency → Term → (Mode/Currency/USD at the end). */
-  .form-grid > .two-col-row.full-width  { order: 3; }
-  .form-grid > .term-group.full-width   { order: 4; }
-  .form-grid > .three-col-row.full-width { order: 5; }
+     DOB → Gender → Mode/Frequency → Sum → Term. */
+  .form-grid > .two-col-row.full-width   { order: 3; }
+  .form-grid > .amount-group             { order: 4; }
+  .form-grid > .term-group.full-width    { order: 5; }
+  .form-grid > .three-col-row.full-width { order: 6; }
 
   /* Level 2 row: 1st item (Mode) takes full width; 2nd + 3rd (Currency + USD)
      share a row at half-each. */
