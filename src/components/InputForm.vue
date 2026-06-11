@@ -335,12 +335,8 @@ const currentStep = computed(() => {
   const v = local.value;
   if (!v.dob) return 'dob';
   if (!v.gender) return 'gender';
-  const amountFilled = v.mode === 'premium_to_sa'
-    ? (v.premium > 0)
-    : (v.sumAssured > 0);
-  if (!touched.value.amount && !amountFilled) return 'amount';
-  if (!touched.value.amount && amountFilled) return 'amount';
   if (!v.frequency) return 'frequency';
+  if (!touched.value.amount) return 'amount';
   if (!touched.value.term) return 'term';
   return null;
 });

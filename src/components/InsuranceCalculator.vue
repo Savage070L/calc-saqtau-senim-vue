@@ -231,15 +231,16 @@ const step1Done = computed(() => {
   return /^\d{4}-\d{2}-\d{2}$/.test(v) && Number(v.slice(0, 4)) >= 1900;
 });
 const step2Done = computed(() => !!formData.value.gender);
-// Step 3: requires the user to finish entering the value (blur / enter).
-const step3Done = computed(() => {
+// Step 3: периодичность взносов.
+const step3Done = computed(() => !!formData.value.frequency);
+// Step 4: сумма взноса — requires the user to finish entering the value (blur / enter).
+const step4Done = computed(() => {
   if (!amountCommitted.value) return false;
   const f = formData.value;
   return f.mode === 'premium_to_sa'
     ? (f.premium > 0)
     : (f.sumAssured > 0);
 });
-const step4Done = computed(() => !!formData.value.frequency);
 // Step 5: requires the user to release the slider OR finish typing in the badge.
 const step5Done = computed(() => termTouched.value && Number(formData.value.term) > 0);
 const step6Done = computed(() => ridersTouched.value);
@@ -288,8 +289,8 @@ const arrowPaths  = ref([]);
 const stepFieldMap = [
   { stepSel: '.ph-steps .ph-step:nth-child(1)', fieldSel: '#dob',                                   done: step1Done },
   { stepSel: '.ph-steps .ph-step:nth-child(2)', fieldSel: '.input-form .form-group .radio-group',  done: step2Done, anchor: 'bottom-center' },
-  { stepSel: '.ph-steps .ph-step:nth-child(3)', fieldSel: '#premium, #sumAssured',                  done: step3Done },
-  { stepSel: '.ph-steps .ph-step:nth-child(4)', fieldSel: '#frequency',                             done: step4Done },
+  { stepSel: '.ph-steps .ph-step:nth-child(3)', fieldSel: '#frequency',                             done: step3Done },
+  { stepSel: '.ph-steps .ph-step:nth-child(4)', fieldSel: '#premium, #sumAssured',                  done: step4Done },
   { stepSel: '.ph-steps .ph-step:nth-child(5)', fieldSel: '.term-slider',                           done: step5Done },
   { stepSel: '.ph-steps .ph-step:nth-child(6)', fieldSel: '.riders-card',                           done: step6Done },
 ];
