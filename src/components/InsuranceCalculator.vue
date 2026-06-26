@@ -677,7 +677,10 @@ watch(result, (r, prev) => {
   padding: 18px;
   border-radius: 22px;
   background: linear-gradient(170deg, #2D5171 0%, #0F1F33 100%);
-  flex: 1;
+  /* Высота по контенту: при коротком сроке карточка обнимает таблицу выкупных,
+     а не растягивается на всю высоту левой колонки (форма + покрытия).
+     Ширину держит default align-items: stretch родителя .right-column. */
+  flex: 0 0 auto;
   min-height: 0;
 }
 
