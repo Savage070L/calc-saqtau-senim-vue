@@ -82,10 +82,10 @@ export default {
   },
 
   riders: {
-    groupDeath: 'ӨЛІМ',
-    groupDisability: 'МҮГЕДЕКТІК',
-    groupTraumaHosp: 'ЖАРАҚАТ ЖӘНЕ АУРУХАНАҒА ЖАТҚЫЗУ',
-    groupCi: 'СЫНДАРЛЫ АУРУЛАР',
+    groupDeath: '',
+    groupDisability: '',
+    groupTraumaHosp: '',
+    groupCi: '',
     groupExtraInsured: 'ҚОСЫМША САҚТАНДЫРУШЫ',
     accidentalDeath: 'ЖО салдарынан қайтыс болу',
     trafficDeath: 'ЖКО салдарынан қайтыс болу',

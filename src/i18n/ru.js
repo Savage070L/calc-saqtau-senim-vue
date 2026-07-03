@@ -82,10 +82,10 @@ export default {
   },
 
   riders: {
-    groupDeath: 'СМЕРТЬ',
-    groupDisability: 'ИНВАЛИДНОСТЬ',
-    groupTraumaHosp: 'ТРАВМЫ И ГОСПИТАЛИЗАЦИЯ',
-    groupCi: 'КРИТИЧЕСКИЕ ЗАБОЛЕВАНИЯ',
+    groupDeath: '',
+    groupDisability: '',
+    groupTraumaHosp: '',
+    groupCi: '',
     groupExtraInsured: 'ДОПОЛНИТЕЛЬНЫЙ ЗАСТРАХОВАННЫЙ',
     accidentalDeath: 'Смерть в результате НС',
     trafficDeath: 'Смерть в результате ДТП',
