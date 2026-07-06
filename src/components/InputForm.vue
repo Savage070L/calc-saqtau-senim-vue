@@ -195,12 +195,11 @@
         </span>
         <span class="toggle-text">{{ t('form.enableAnnuity') }}</span>
         <InfoTooltip v-bind="tip('annuity')" />
-        <span class="toggle-arrow chev" :class="{ open: local.enableAnnuity }">▼</span>
+        <span class="toggle-arrow">{{ local.enableAnnuity ? '▲' : '▼' }}</span>
       </label>
     </div>
 
-    <SmoothCollapse :show="local.enableAnnuity">
-    <div class="form-grid annuity-grid">
+    <div v-if="local.enableAnnuity" class="form-grid annuity-grid">
       <!-- Периодичность выплат -->
       <div class="form-group full-width">
         <label for="annuityFrequency" class="label-row">{{ t('form.annuityFrequency') }} <InfoTooltip v-bind="tip('annuityFrequency')" /></label>
@@ -245,7 +244,6 @@
         <span v-if="local.guaranteedPeriod === 0" class="hint">{{ t('form.noGuaranteedPeriod') }}</span>
       </div>
     </div>
-    </SmoothCollapse>
   </div>
 </template>
 
@@ -254,7 +252,6 @@ import { ref, computed, watch, nextTick } from 'vue';
 import { PolicyCalculator } from '../core/calculator.js';
 import { PRODUCT_CONFIG } from '../config/product.js';
 import InfoTooltip from './InfoTooltip.vue';
-import SmoothCollapse from './SmoothCollapse.vue';
 import { useI18n } from '../i18n/index.js';
 
 const { t, tip, pluralYears } = useI18n();
@@ -585,15 +582,12 @@ const guaranteedPeriodSliderStyle = computed(() => {
   box-shadow: var(--shadow-in);
   color: var(--text-main);
   outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.25s ease;
+  transition: border-color 0.2s ease;
   height: 42px;
   box-sizing: border-box;
   font-family: inherit;
 }
-.neu-input:focus {
-  border-color: #A1C95A;
-  box-shadow: 0 0 0 3px rgba(161,201,90,0.20);
-}
+.neu-input:focus { border-color: var(--accent); box-shadow: var(--shadow-btn-press); }
 .neu-input.hint-mode {
   color: rgba(255,255,255,0.55);
   -webkit-text-fill-color: rgba(255,255,255,0.55);
@@ -637,11 +631,6 @@ select.select-green {
   padding-right: 36px;
   cursor: pointer;
 }
-select.select-green {
-  transition: filter 0.2s ease, transform 0.12s ease, box-shadow 0.2s ease;
-}
-select.select-green:hover { filter: brightness(1.07); }
-select.select-green:active { transform: scale(0.99); }
 select.select-green:focus {
   border: none;
   box-shadow: 0 0 0 2px rgba(255,255,255,0.35);
@@ -688,14 +677,11 @@ input[type="date"].neu-input::-webkit-calendar-picker-indicator:hover { opacity:
   border-radius: 10px;
   background: var(--surface);
   box-shadow: var(--shadow-in);
-  transition: border-color 0.2s ease, box-shadow 0.25s ease;
+  transition: border-color 0.2s ease;
   height: 42px;
   box-sizing: border-box;
 }
-.input-wrap:focus-within {
-  border-color: #A1C95A;
-  box-shadow: 0 0 0 3px rgba(161,201,90,0.20);
-}
+.input-wrap:focus-within { border-color: var(--accent); box-shadow: var(--shadow-btn-press); }
 .input-wrap .neu-input {
   flex: 1 1 auto;
   min-width: 0;
@@ -728,18 +714,9 @@ input[type="date"].neu-input::-webkit-calendar-picker-indicator:hover { opacity:
   transition: all 0.2s ease;
   height: 42px;
 }
-@media (hover: hover) {
-  .radio-pill:hover span {
-    border-color: rgba(161,201,90,0.75);
-    color: #FFFFFF;
-    transform: translateY(-1px);
-  }
-}
-.radio-pill:active span { transform: translateY(0) scale(0.97); }
 .radio-pill input:checked + span {
   background: linear-gradient(135deg, #A1C95A, #5C8E2F);
   color: white; border: none;
-  box-shadow: 0 4px 14px rgba(121,183,64,0.35);
 }
 .pill-faded span { opacity: 0.45; }
 
@@ -817,15 +794,6 @@ input[type="date"].neu-input::-webkit-calendar-picker-indicator:hover { opacity:
   background: linear-gradient(135deg, #FFFFFF 0%, #DCEEFF 100%);
   border: 3px solid #A1C95A;
   box-shadow: 0 2px 6px rgba(0,0,0,0.35);
-  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.2s ease;
-}
-.term-slider:active::-webkit-slider-thumb {
-  transform: scale(1.18);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.35), 0 0 0 7px rgba(161,201,90,0.18);
-}
-.term-slider:active::-moz-range-thumb {
-  transform: scale(1.18);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.35), 0 0 0 7px rgba(161,201,90,0.18);
 }
 .term-slider::-moz-range-thumb {
   width: 26px; height: 26px;
@@ -870,17 +838,8 @@ input[type="date"].neu-input::-webkit-calendar-picker-indicator:hover { opacity:
   transition: all 0.2s ease;
   position: relative;
 }
-.annuity-toggle-label:hover .custom-chk {
-  box-shadow: 0 0 0 3px rgba(161,201,90,0.18);
-}
 .annuity-chk:checked ~ .custom-chk {
   background: linear-gradient(135deg, #A1C95A, #5C8E2F);
-  animation: chkPop 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-@keyframes chkPop {
-  0%   { transform: scale(0.85); }
-  55%  { transform: scale(1.14); }
-  100% { transform: scale(1); }
 }
 .annuity-chk:checked ~ .custom-chk::after {
   content: '✓';
